@@ -1,6 +1,6 @@
-# Substrate Node Template
+# e2 chain node
 
-A new FRAME-based Substrate node, ready for hacking :rocket:
+e2 chain node is built on top of Substrate
 
 ## Local Development
 
