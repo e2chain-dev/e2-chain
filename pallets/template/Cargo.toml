@@ -2,7 +2,7 @@
 authors = ['deeper.network dev']
 description = 'FRAME pallet template for defining custom runtime logic.'
 edition = '2018'
-homepage = 'https://substrate.dev'
+homepage = 'https://deeper.network'
 license = 'Unlicense'
 name = 'pallet-template'
 repository = 'https://github.com/e2chain-dev/e2-chain'
