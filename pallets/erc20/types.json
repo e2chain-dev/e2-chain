@@ -1,10 +1,4 @@
 {
-  "Address": "AccountId",
   "LookupSource": "AccountId",
-  "TokenBalance": "u64",
-  "Erc20Token": {
-    "name": "Vec<u8>",
-    "ticker": "Vec<u8>",
-    "total_supply": "TokenBalance"
-  }
+  "TokenBalance": "u64"
 }
