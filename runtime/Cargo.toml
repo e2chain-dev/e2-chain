@@ -165,6 +165,13 @@ package = 'pallet-template'
 path = '../pallets/template'
 version = '2.0.0-rc6'
 
+[dependencies.erc20]
+default-features = false
+package = 'pallet-erc20'
+path = '../pallets/erc20'
+version = '2.0.0-rc6'
+
+
 [features]
 default = ['std']
 std = [
