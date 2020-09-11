@@ -31,8 +31,10 @@ decl_event!(
         AccountId = <T as frame_system::Trait>::AccountId,
         //Balance = BalanceOf<T>,
     {
-        // event for register an device
-        Register(AccountId, Vec<u8>),
+        // register node: AccountId, ipv4
+        RegisterNode(AccountId, Vec<u8>),
+        // register server: AccountId, country
+        RegisterServer(AccountId, Vec<u8>),
     }
 );
 
@@ -57,10 +59,12 @@ decl_module! {
           ensure!(ip.len() == 4, "IPv4 has 4 bytes");
           let node = Node {
               account_id: sender.clone(),
-              ipv4: ip,
+              ipv4: ip.clone(),
           };
           // TODO: lock some tokens
-          <DeviceInfo<T>>::insert(sender, node);
+          <DeviceInfo<T>>::insert(sender.clone(), node);
+
+          Self::deposit_event(RawEvent::RegisterNode(sender, ip));
           Ok(())
       }
 
@@ -73,15 +77,15 @@ decl_module! {
 
           // TODO: think of more efficient way
           let mut server_list = <ServersByCountry<T>>::get(country.clone());
-          // TODO: check repeat registration and slash?
-          server_list.push(sender);
-          <ServersByCountry<T>>::insert(country,server_list);
+          let cloned_sender = sender.clone(); // for efficiency
+          for item in &server_list {
+              ensure!(*item != cloned_sender, "double registration not allowed!");
+          }
+          server_list.push(cloned_sender);
+          <ServersByCountry<T>>::insert(country.clone(),server_list);
+          Self::deposit_event(RawEvent::RegisterServer(sender, country));
           Ok(())
       }
 
-      #[weight = 10_000]
-      pub fn lookup_server(origin, country: Vec<u8>) -> DispatchResult {
-          Ok(())
-      }
   }
 }

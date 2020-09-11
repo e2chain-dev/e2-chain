@@ -1,0 +1,8 @@
+{
+  "LookupSource": "AccountId",
+  "TokenBalance": "u64",
+  "Node": {
+    "account_id": "AccountId",
+    "ipv4": "Vec<u8>"
+  }
+}
