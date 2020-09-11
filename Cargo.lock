@@ -1197,6 +1197,7 @@ dependencies = [
  "frame-system-rpc-runtime-api",
  "pallet-aura",
  "pallet-balances",
+ "pallet-deeper-micropay-channel",
  "pallet-deeper-node",
  "pallet-erc20",
  "pallet-grandpa",
@@ -3646,6 +3647,16 @@ dependencies = [
  "serde",
  "sp-runtime",
  "sp-std",
+]
+
+[[package]]
+name = "pallet-deeper-micropay-channel"
+version = "2.0.0-rc6"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "sp-core",
 ]
 
 [[package]]

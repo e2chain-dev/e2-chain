@@ -7,5 +7,6 @@ members = [
     'pallets/template',
     'pallets/erc20',
     'pallets/deeper-node',
+    'pallets/deeper-micropay-channel',
     'runtime',
 ]

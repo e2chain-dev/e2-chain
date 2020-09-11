@@ -177,7 +177,11 @@ package = 'pallet-deeper-node'
 path = '../pallets/deeper-node'
 version = '2.0.0-rc6'
 
-
+[dependencies.deeper-micropay-channel]
+default-features = false
+package = 'pallet-deeper-micropay-channel'
+path = '../pallets/deeper-micropay-channel'
+version = '2.0.0-rc6'
 
 [features]
 default = ['std']
