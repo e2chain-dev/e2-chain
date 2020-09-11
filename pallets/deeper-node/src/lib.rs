@@ -18,10 +18,10 @@ type BalanceOf<T> =
     <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
 
 // struct to store the registered Device Informatin
-#[derive(Decode, Encode)]
-pub struct DeviceInfo<AccountId> {
-    AccountId: AccountId,
-    IP: Vec<u8>, // IP will not be exposed in future version
+#[derive(Decode, Encode, Default)]
+pub struct Node<AccountId> {
+    account_id: AccountId,
+    ipv4: Vec<u8>, // IP will not be exposed in future version
 }
 
 // events
@@ -39,7 +39,8 @@ decl_event!(
 // storage for this module
 decl_storage! {
   trait Store for Module<T: Trait> as Device {
-
+      DeviceInfo get(fn get_device_info): map hasher(identity) T::AccountId => Node<T::AccountId>;
+      ServersByCountry get(fn get_servers_by_country): map hasher(identity) Vec<u8> => Vec<T::AccountId>;
   }
 
 }
@@ -49,5 +50,32 @@ decl_module! {
   pub struct Module<T: Trait> for enum Call where origin: T::Origin {
       // initialize the default event for this module
       fn deposit_event() = default;
+
+      #[weight = 10_000]
+      pub fn register_device(origin, ip: Vec<u8>) -> DispatchResult {
+          let sender = ensure_signed(origin)?;
+          ensure!(ip.len() == 4, "IPv4 has 4 bytes");
+          let node = Node {
+              account_id: sender.clone(),
+              ipv4: ip,
+          };
+          // TODO: lock some tokens
+          <DeviceInfo<T>>::insert(sender, node);
+          Ok(())
+      }
+
+      #[weight = 10_000]
+      pub fn register_server(origin, country: Vec<u8>) -> DispatchResult {
+          let sender = ensure_signed(origin)?;
+          ensure!(<DeviceInfo<T>>::contains_key(sender.clone()),"sender device needs register first");
+          ensure!(country.len() == 1, "Country code has 1 byte");
+
+          // TODO: think of more efficient way
+          let mut server_list = <ServersByCountry<T>>::get(country.clone());
+          // TODO: check repeat registration and slash?
+          server_list.push(sender);
+          <ServersByCountry<T>>::insert(country,server_list);
+          Ok(())
+      }
   }
 }
