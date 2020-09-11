@@ -1197,6 +1197,7 @@ dependencies = [
  "frame-system-rpc-runtime-api",
  "pallet-aura",
  "pallet-balances",
+ "pallet-deeper-node",
  "pallet-erc20",
  "pallet-grandpa",
  "pallet-randomness-collective-flip",
@@ -3645,6 +3646,16 @@ dependencies = [
  "serde",
  "sp-runtime",
  "sp-std",
+]
+
+[[package]]
+name = "pallet-deeper-node"
+version = "2.0.0-rc6"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "sp-core",
 ]
 
 [[package]]

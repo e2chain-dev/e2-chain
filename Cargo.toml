@@ -6,5 +6,6 @@ members = [
     'node',
     'pallets/template',
     'pallets/erc20',
+    'pallets/deeper-node',
     'runtime',
 ]

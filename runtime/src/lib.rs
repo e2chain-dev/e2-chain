@@ -46,6 +46,9 @@ pub use template;
 /// Import the multi-erc20 pallet
 pub use erc20;
 
+/// Import the deeper-node pallet
+pub use deeper_node;
+
 /// An index to a block.
 pub type BlockNumber = u32;
 
@@ -272,6 +275,11 @@ impl erc20::Trait for Runtime {
     type TokenBalance = u64;
 }
 
+impl deeper_node::Trait for Runtime {
+    type Event = Event;
+    type Currency = Balances;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
     pub enum Runtime where
@@ -290,6 +298,7 @@ construct_runtime!(
         // Include the custom logic from the template pallet in the runtime.
         TemplateModule: template::{Module, Call, Storage, Event<T>},
         Erc20: erc20::{Module, Call, Storage, Event<T>},
+        DeeperNode: deeper_node::{Module, Call, Storage, Event<T>},
     }
 );
 

@@ -171,6 +171,13 @@ package = 'pallet-erc20'
 path = '../pallets/erc20'
 version = '2.0.0-rc6'
 
+[dependencies.deeper-node]
+default-features = false
+package = 'pallet-deeper-node'
+path = '../pallets/deeper-node'
+version = '2.0.0-rc6'
+
+
 
 [features]
 default = ['std']
