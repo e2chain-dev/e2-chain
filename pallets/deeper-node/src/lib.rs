@@ -67,7 +67,8 @@ decl_module! {
       #[weight = 10_000]
       pub fn register_server(origin, country: Vec<u8>) -> DispatchResult {
           let sender = ensure_signed(origin)?;
-          ensure!(<DeviceInfo<T>>::contains_key(sender.clone()),"sender device needs register first");
+          ensure!(<DeviceInfo<T>>::contains_key(sender.clone()),
+              "sender device needs register first");
           ensure!(country.len() == 1, "Country code has 1 byte");
 
           // TODO: think of more efficient way
@@ -75,6 +76,11 @@ decl_module! {
           // TODO: check repeat registration and slash?
           server_list.push(sender);
           <ServersByCountry<T>>::insert(country,server_list);
+          Ok(())
+      }
+
+      #[weight = 10_000]
+      pub fn lookup_server(origin, country: Vec<u8>) -> DispatchResult {
           Ok(())
       }
   }
