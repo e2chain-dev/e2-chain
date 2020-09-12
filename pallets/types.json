@@ -3,6 +3,7 @@
   "TokenBalance": "u64",
   "Node": {
     "account_id": "AccountId",
-    "ipv4": "Vec<u8>"
+    "ipv4": "Vec<u8>",
+    "country": "Option<Vec<u8>>"
   }
 }
