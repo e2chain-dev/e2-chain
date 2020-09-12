@@ -97,16 +97,7 @@ decl_module! {
               "sender device needs register first");
           ensure!(country.len() == 2, "Country code has 2 byte");
 
-          match Self::try_add_server(&sender, &country) {
-              Ok(_) => { // update country in the node field
-                  let mut node = <DeviceInfo<T>>::get(sender.clone());
-                  node.country = Some(country.clone());
-                  <DeviceInfo<T>>::insert(sender.clone(),node);
-              },
-              Err(err) => {
-                  return Err(err);
-              },
-          }
+          let _ = Self::try_add_server(&sender, &country);
 
           Ok(())
       }
@@ -131,6 +122,11 @@ impl<T: Trait> Module<T> {
             server_list.remove(index);
             <ServersByCountry<T>>::insert(country.clone(), server_list);
             Self::deposit_event(RawEvent::ServerRemoved(sender.clone(), country.clone()));
+
+            // ensure consistency
+            let mut node = <DeviceInfo<T>>::get(sender.clone());
+            node.country = None;
+            <DeviceInfo<T>>::insert(sender.clone(), node);
         }
         Ok(())
     }
@@ -147,6 +143,12 @@ impl<T: Trait> Module<T> {
         server_list.push(cloned_sender);
         <ServersByCountry<T>>::insert(country.clone(), server_list);
         Self::deposit_event(RawEvent::ServerAdded(sender.clone(), country.clone()));
+
+        // ensure consistency
+        let mut node = <DeviceInfo<T>>::get(sender.clone());
+        node.country = Some(country.clone());
+        <DeviceInfo<T>>::insert(sender.clone(), node);
+
         Ok(())
     }
 }
