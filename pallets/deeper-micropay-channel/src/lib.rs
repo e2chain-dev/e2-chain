@@ -1,7 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use frame_support::codec::{Decode, Encode};
-use frame_support::traits::{Currency, Time, Vec};
+use frame_support::traits::{Currency, ExistenceRequirement::AllowDeath, Time, Vec};
 use frame_support::{decl_event, decl_module, decl_storage, dispatch::DispatchResult, ensure};
 use frame_system::{self, ensure_signed};
 
@@ -25,7 +25,7 @@ type ChannelOf<T> = Chan<<T as frame_system::Trait>::AccountId, Moment<T>>;
 pub struct Chan<AccountId, Timestamp> {
     sender: AccountId,
     receiver: AccountId,
-    timestamp: Timestamp,
+    expiration: Timestamp,
 }
 
 // events
@@ -34,10 +34,11 @@ decl_event!(
     where
         AccountId = <T as frame_system::Trait>::AccountId,
         Timestamp = Moment<T>,
-        //Balance = BalanceOf<T>,
+        Balance = BalanceOf<T>,
     {
         ChannelOpened(AccountId, AccountId, Timestamp),
         ChannelClosed(AccountId, AccountId, Timestamp),
+        ClaimPayment(AccountId, AccountId, Balance),
     }
 );
 
@@ -63,10 +64,23 @@ decl_module! {
           let chan = ChannelOf::<T>{
               sender: sender.clone(),
               receiver: receiver.clone(),
-              timestamp: time.clone(),
+              expiration: time.clone(),
           };
           Channel::<T>::insert((sender.clone(),receiver.clone()), chan);
           Self::deposit_event(RawEvent::ChannelOpened(sender,receiver, time));
+          Ok(())
+      }
+
+      #[weight = 10_000]
+      pub fn claim_payment(origin, sender: T::AccountId, nonce: u32, amount: BalanceOf<T>, signature: Vec<u8>) -> DispatchResult {
+          let receiver = ensure_signed(origin)?;
+          ensure!(Channel::<T>::contains_key((sender.clone(),receiver.clone())), "Channel not exists");
+          let _channel = Channel::<T>::get((sender.clone(), receiver.clone()));
+          // TODO: verify signature, signature is on hash of |receiver_addr|nonce|amount|
+          //
+
+          T::Currency::transfer(&sender, &receiver, amount, AllowDeath)?; // TODO: check what is AllowDeath
+          Self::deposit_event(RawEvent::ClaimPayment(sender, receiver, amount));
           Ok(())
       }
   }
