@@ -286,8 +286,8 @@ impl deeper_node::Trait for Runtime {
 impl deeper_micropay_channel::Trait for Runtime {
     type Event = Event;
     type Currency = Balances;
+    type Timestamp = Timestamp;
 }
-
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
