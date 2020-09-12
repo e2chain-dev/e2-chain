@@ -8,6 +8,11 @@ version = '2.0.0-rc6'
 [package.metadata.docs.rs]
 targets = ['x86_64-unknown-linux-gnu']
 
+[dependencies]
+libsecp256k1 = { version = "0.3.2", default-features = false }
+blake2-rfc = { version = "0.2.18", default-features = false }
+
+
 [dependencies.codec]
 default-features = false
 features = ['derive']
