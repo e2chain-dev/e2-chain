@@ -31,18 +31,6 @@ pub struct Chan<AccountId, Timestamp> {
     expiration: Timestamp,
 }
 
-#[derive(Encode, Decode)]
-pub struct Transfer<AccountId, Balance> {
-    pub sender: AccountId,
-    pub amount: Balance,
-    pub nonce: u32,
-}
-#[derive(Encode, Decode)]
-pub struct TransferData<AccountId, Balance> {
-    pub data: Transfer<AccountId, Balance>,
-    pub signature: Vec<u8>,
-}
-
 // events
 decl_event!(
     pub enum Event<T>
@@ -76,6 +64,7 @@ decl_module! {
       pub fn open_channel(origin, receiver: T::AccountId) -> DispatchResult {
           let sender = ensure_signed(origin)?;
           ensure!(!Channel::<T>::contains_key((sender.clone(),receiver.clone())), "Channel already opened");
+          ensure!(sender.clone() != receiver.clone(), "Channel should connect two different accounts");
           let time = T::Timestamp::now();
           let chan = ChannelOf::<T>{
               sender: sender.clone(),
@@ -84,6 +73,22 @@ decl_module! {
           };
           Channel::<T>::insert((sender.clone(),receiver.clone()), chan);
           Self::deposit_event(RawEvent::ChannelOpened(sender,receiver, time));
+          Ok(())
+      }
+
+      #[weight = 10_000]
+      // make sure claim your payment before close the channel, TODO: add safty guard
+      pub fn close_channel(origin, sender: T::AccountId) -> DispatchResult {
+          // only receiver can close the channel
+          let receiver = ensure_signed(origin)?;
+          ensure!(Channel::<T>::contains_key((sender.clone(),receiver.clone())), "Channel not exists");
+
+          // remove all the nonce of given channel
+          Nonce::<T>::remove_prefix((sender.clone(),receiver.clone()));
+          Channel::<T>::remove((sender.clone(),receiver.clone()));
+          let time = T::Timestamp::now();
+          Self::deposit_event(RawEvent::ChannelClosed(sender,receiver, time));
+
           Ok(())
       }
 
