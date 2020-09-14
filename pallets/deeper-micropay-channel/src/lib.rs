@@ -6,8 +6,6 @@ use frame_support::{decl_event, decl_module, decl_storage, dispatch::DispatchRes
 use frame_system::{self, ensure_signed};
 use secp256k1;
 
-mod hashing;
-
 /// Configure the pallet by specifying the parameters and types on which it depends.
 pub trait Trait: frame_system::Trait {
     /// Because this pallet emits events, it depends on the runtime's definition of an event.
@@ -120,24 +118,24 @@ impl<T: Trait> Module<T> {
         amount: BalanceOf<T>,
         signature: &Vec<u8>,
     ) -> DispatchResult {
-        //let mut pk = [0u8; 33];
-        //pk.copy_from_slice(&sender_pubkey);
-        //let pk = secp256k1::PublicKey::from(sender).as_array_ref();
-        //let pub_key = secp256k1::PublicKey::parse_compressed(&pk);
-        //ensure!(pub_key.is_ok(), "Invalid Pubkey");
+        let mut pk = [0u8; 33];
+        pk.copy_from_slice(&sender.encode());
+        let pub_key = secp256k1::PublicKey::parse_compressed(&pk);
+        ensure!(pub_key.is_ok(), "Invalid Pubkey");
 
-        /*
+        // TODO: construct data from |receiver_addr|nonce|amount|
+        let data: Vec<u8> = Vec::new();
+
         let signature = secp256k1::Signature::parse_slice(signature);
         ensure!(signature.is_ok(), "Invalid Signature");
 
-        let msg_hash = hashing::blake2_256(&Encode::encode(data));
+        let msg_hash = sp_io::hashing::blake2_256(&Encode::encode(&data));
         let mut buffer = [0u8; 32];
         buffer.copy_from_slice(&msg_hash);
         let message = secp256k1::Message::parse(&buffer);
 
         let verified = secp256k1::verify(&message, &signature.unwrap(), &pub_key.unwrap());
         ensure!(verified, "Fail to verify");
-        */
 
         Ok(())
     }

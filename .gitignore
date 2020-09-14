@@ -13,3 +13,5 @@
 .local
 
 *.txt
+*.bak
+tests/
