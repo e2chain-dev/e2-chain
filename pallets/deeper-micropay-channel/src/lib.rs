@@ -123,20 +123,56 @@ impl<T: Trait> Module<T> {
         let pub_key = secp256k1::PublicKey::parse_compressed(&pk);
         ensure!(pub_key.is_ok(), "Invalid Pubkey");
 
-        // TODO: construct data from |receiver_addr|nonce|amount|
-        let data: Vec<u8> = Vec::new();
-
         let signature = secp256k1::Signature::parse_slice(signature);
         ensure!(signature.is_ok(), "Invalid Signature");
 
-        let msg_hash = sp_io::hashing::blake2_256(&Encode::encode(&data));
-        let mut buffer = [0u8; 32];
-        buffer.copy_from_slice(&msg_hash);
-        let message = secp256k1::Message::parse(&buffer);
+        let hash = Self::construct_byte_array_and_hash(&receiver, nonce, amount);
+        let message = secp256k1::Message::parse(&hash);
 
         let verified = secp256k1::verify(&message, &signature.unwrap(), &pub_key.unwrap());
         ensure!(verified, "Fail to verify");
 
         Ok(())
+    }
+
+    // construct data from |receiver_addr|nonce|amount| and hash it
+    fn construct_byte_array_and_hash(
+        address: &T::AccountId,
+        nonce: u32,
+        amount: BalanceOf<T>,
+    ) -> [u8; 32] {
+        let mut data = Vec::new();
+        data.extend_from_slice(&address.encode());
+        data.extend_from_slice(&nonce.to_be_bytes());
+        data.extend_from_slice(&amount.encode());
+        let hash = sp_io::hashing::blake2_256(&data);
+        hash
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_blake2_hash() {
+        let alice: [u8; 32] = [
+            212, 53, 147, 199, 21, 253, 211, 28, 97, 20, 26, 189, 4, 169, 159, 214, 130, 44, 133,
+            88, 133, 76, 205, 227, 154, 86, 132, 231, 165, 109, 162, 125,
+        ];
+        let nonce: u32 = 22;
+        let amount: u128 = 100;
+        let mut data = Vec::new();
+
+        let should_be: [u8; 32] = [
+            162, 225, 249, 9, 223, 71, 169, 240, 180, 154, 247, 135, 145, 15, 230, 200, 24, 9, 21,
+            249, 253, 78, 123, 105, 135, 191, 146, 220, 204, 18, 247, 124,
+        ];
+
+        data.extend_from_slice(&alice);
+        data.extend_from_slice(&nonce.to_be_bytes());
+        data.extend_from_slice(&amount.to_be_bytes());
+        let hash = sp_io::hashing::blake2_256(&data);
+        assert_eq!(&hash, &should_be);
     }
 }
