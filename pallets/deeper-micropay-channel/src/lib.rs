@@ -88,20 +88,16 @@ decl_module! {
       }
 
       #[weight = 10_000]
-      pub fn claim_payment(origin, sender: T::AccountId, data: Vec<u8>) -> DispatchResult {
+      pub fn claim_payment(origin, sender: T::AccountId, nonce: u32, amount: BalanceOf<T>, signature: Vec<u8>) -> DispatchResult {
           let receiver = ensure_signed(origin)?;
           ensure!(Channel::<T>::contains_key((sender.clone(),receiver.clone())), "Channel not exists");
 
-          let data = Decode::decode(&mut &data[..]);
-          ensure!(data.is_ok(), "Bad transaction data");
-          let transfer_data: TransferData<<T as frame_system::Trait>::AccountId, BalanceOf<T>> = data.unwrap();
+          ensure!(!Nonce::<T>::contains_key((sender.clone(),receiver.clone()),nonce), "Nonce already consumed");
+          Self::verify_signature(&sender, &receiver, nonce, amount, &signature)?;
 
-          ensure!(!Nonce::<T>::contains_key((sender.clone(),receiver.clone()),transfer_data.data.nonce), "Nonce already consumed");
-          Self::verify_signature(&sender, &transfer_data)?;
-
-          T::Currency::transfer(&sender, &receiver, transfer_data.data.amount, AllowDeath)?; // TODO: check what is AllowDeath
-          Nonce::<T>::insert((sender.clone(),receiver.clone()), transfer_data.data.nonce, true); // mark nonce as used
-          Self::deposit_event(RawEvent::ClaimPayment(sender, receiver, transfer_data.data.amount));
+          T::Currency::transfer(&sender, &receiver, amount, AllowDeath)?; // TODO: check what is AllowDeath
+          Nonce::<T>::insert((sender.clone(),receiver.clone()), nonce, true); // mark nonce as used
+          Self::deposit_event(RawEvent::ClaimPayment(sender, receiver, amount));
           Ok(())
       }
   }
@@ -113,8 +109,11 @@ impl<T: Trait> Module<T> {
     // micropayments with the same nonce; the receiver can only claim one payment of the same
     // nonce, i.e. the latest accumulated micropayment.
     pub fn verify_signature(
-        sender: &<T as frame_system::Trait>::AccountId,
-        transfer_data: &TransferData<<T as frame_system::Trait>::AccountId, BalanceOf<T>>,
+        sender: &T::AccountId,
+        receiver: &T::AccountId,
+        nonce: u32,
+        amount: BalanceOf<T>,
+        signature: &Vec<u8>,
     ) -> DispatchResult {
         //let mut pk = [0u8; 33];
         //pk.copy_from_slice(&sender_pubkey);
@@ -123,10 +122,10 @@ impl<T: Trait> Module<T> {
         //ensure!(pub_key.is_ok(), "Invalid Pubkey");
 
         /*
-        let signature = secp256k1::Signature::parse_slice(&transfer_data.signature);
+        let signature = secp256k1::Signature::parse_slice(signature);
         ensure!(signature.is_ok(), "Invalid Signature");
 
-        let msg_hash = hashing::blake2_256(&Encode::encode(&transfer_data.data));
+        let msg_hash = hashing::blake2_256(&Encode::encode(data));
         let mut buffer = [0u8; 32];
         buffer.copy_from_slice(&msg_hash);
         let message = secp256k1::Message::parse(&buffer);
