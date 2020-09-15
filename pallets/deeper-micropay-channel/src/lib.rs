@@ -4,7 +4,8 @@ use frame_support::codec::{Decode, Encode};
 use frame_support::traits::{Currency, ExistenceRequirement::AllowDeath, Time, Vec};
 use frame_support::{decl_event, decl_module, decl_storage, dispatch::DispatchResult, ensure};
 use frame_system::{self, ensure_signed};
-use secp256k1;
+use sp_core::sr25519;
+use sp_io::crypto::sr25519_verify;
 
 /// Configure the pallet by specifying the parameters and types on which it depends.
 pub trait Trait: frame_system::Trait {
@@ -118,19 +119,18 @@ impl<T: Trait> Module<T> {
         amount: BalanceOf<T>,
         signature: &Vec<u8>,
     ) -> DispatchResult {
-        let mut pk = [0u8; 33];
+        let mut pk = [0u8; 32];
         pk.copy_from_slice(&sender.encode());
-        let pub_key = secp256k1::PublicKey::parse_compressed(&pk);
-        ensure!(pub_key.is_ok(), "Invalid Pubkey");
+        let pub_key = sr25519::Public::from_raw(pk);
 
-        let signature = secp256k1::Signature::parse_slice(signature);
-        ensure!(signature.is_ok(), "Invalid Signature");
+        let mut sig = [0u8; 64];
+        sig.copy_from_slice(&signature);
+        let sig = sr25519::Signature::from_slice(&sig);
 
-        let hash = Self::construct_byte_array_and_hash(&receiver, nonce, amount);
-        let message = secp256k1::Message::parse(&hash);
+        let msg = Self::construct_byte_array_and_hash(&receiver, nonce, amount);
 
-        let verified = secp256k1::verify(&message, &signature.unwrap(), &pub_key.unwrap());
-        ensure!(verified, "Fail to verify");
+        let verified = sr25519_verify(&sig, &msg, &pub_key);
+        ensure!(verified, "Fail to verify signature");
 
         Ok(())
     }
@@ -156,23 +156,51 @@ mod tests {
 
     #[test]
     fn test_blake2_hash() {
-        let alice: [u8; 32] = [
-            212, 53, 147, 199, 21, 253, 211, 28, 97, 20, 26, 189, 4, 169, 159, 214, 130, 44, 133,
-            88, 133, 76, 205, 227, 154, 86, 132, 231, 165, 109, 162, 125,
+        let bob: [u8; 32] = [
+            142, 175, 4, 21, 22, 135, 115, 99, 38, 201, 254, 161, 126, 37, 252, 82, 135, 97, 54,
+            147, 201, 18, 144, 156, 178, 38, 170, 71, 148, 242, 106, 72,
         ];
         let nonce: u32 = 22;
         let amount: u128 = 100;
         let mut data = Vec::new();
 
         let should_be: [u8; 32] = [
-            162, 225, 249, 9, 223, 71, 169, 240, 180, 154, 247, 135, 145, 15, 230, 200, 24, 9, 21,
-            249, 253, 78, 123, 105, 135, 191, 146, 220, 204, 18, 247, 124,
+            204, 32, 30, 136, 139, 38, 43, 64, 99, 194, 191, 149, 97, 108, 87, 173, 224, 25, 104,
+            100, 0, 179, 72, 91, 202, 84, 34, 190, 178, 119, 59, 41,
         ];
 
-        data.extend_from_slice(&alice);
+        data.extend_from_slice(&bob);
         data.extend_from_slice(&nonce.to_be_bytes());
         data.extend_from_slice(&amount.to_be_bytes());
         let hash = sp_io::hashing::blake2_256(&data);
         assert_eq!(&hash, &should_be);
+    }
+
+    #[test]
+    fn test_signature() {
+        let sig: [u8; 64] = [
+            68, 47, 70, 69, 17, 14, 9, 253, 233, 25, 253, 31, 54, 87, 196, 88, 192, 81, 241, 235,
+            51, 175, 232, 189, 181, 176, 89, 123, 223, 237, 162, 39, 79, 234, 237, 116, 157, 88,
+            19, 64, 224, 90, 66, 80, 4, 202, 207, 153, 220, 159, 142, 118, 210, 8, 25, 102, 159,
+            44, 229, 1, 58, 237, 243, 135,
+        ];
+        assert_eq!(sig.len(), 64);
+        let pk: [u8; 32] = [
+            212, 53, 147, 199, 21, 253, 211, 28, 97, 20, 26, 189, 4, 169, 159, 214, 130, 44, 133,
+            88, 133, 76, 205, 227, 154, 86, 132, 231, 165, 109, 162, 125,
+        ];
+        assert_eq!(pk.len(), 32);
+        let msg: [u8; 32] = [
+            204, 32, 30, 136, 139, 38, 43, 64, 99, 194, 191, 149, 97, 108, 87, 173, 224, 25, 104,
+            100, 0, 179, 72, 91, 202, 84, 34, 190, 178, 119, 59, 41,
+        ];
+
+        let pk = sr25519::Public::from_raw(pk);
+        let sig = sr25519::Signature::from_slice(&sig);
+        println!("pk:{:?}", pk);
+        println!("sig:{:?}", sig);
+        println!("msg:{:?}", msg);
+        let verified = sr25519_verify(&sig, &msg, &pk);
+        assert_eq!(verified, true);
     }
 }

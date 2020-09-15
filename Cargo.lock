@@ -3656,7 +3656,6 @@ dependencies = [
  "blake2-rfc",
  "frame-support",
  "frame-system",
- "libsecp256k1",
  "parity-scale-codec",
  "sp-core",
  "sp-io",
