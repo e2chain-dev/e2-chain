@@ -13,7 +13,7 @@ pub trait Trait: frame_system::Trait {
     /// Because this pallet emits events, it depends on the runtime's definition of an event.
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
     type Currency: Currency<Self::AccountId>;
-    type Timestamp: Time;
+    type Timestamp: Time + From<u64>;
 }
 
 type BalanceOf<T> =
@@ -29,6 +29,7 @@ type ChannelOf<T> = Chan<<T as frame_system::Trait>::AccountId, Moment<T>>;
 pub struct Chan<AccountId, Timestamp> {
     sender: AccountId,
     receiver: AccountId,
+    nonce: u64,
     opened: Timestamp,
     expiration: Timestamp,
 }
@@ -41,7 +42,7 @@ decl_event!(
         Timestamp = Moment<T>,
         Balance = BalanceOf<T>,
     {
-        ChannelOpened(AccountId, AccountId, Timestamp, Timestamp),
+        ChannelOpened(AccountId, AccountId, u64, Timestamp, Timestamp),
         ChannelClosed(AccountId, AccountId, Timestamp),
         ClaimPayment(AccountId, AccountId, Balance),
     }
@@ -51,7 +52,9 @@ decl_event!(
 decl_storage! {
   trait Store for Module<T: Trait> as Device {
       Channel get(fn get_channel): map hasher(blake2_128_concat) (T::AccountId, T::AccountId) => ChannelOf<T>;
-      Nonce get(fn get_nonce): double_map hasher(blake2_128_concat) (T::AccountId, T::AccountId), hasher(blake2_128_concat) u32 => bool;
+      // nonce indicates the next available value; increase by one whenever open a new channel for an account pair
+      Nonce get(fn get_nonce): map hasher(blake2_128_concat) (T::AccountId, T::AccountId)  => u64;
+      SessionId get(fn get_session_id): double_map hasher(blake2_128_concat) (T::AccountId, T::AccountId), hasher(blake2_128_concat) u32 => bool;
   }
 
 }
@@ -68,17 +71,20 @@ decl_module! {
           let sender = ensure_signed(origin)?;
           ensure!(!Channel::<T>::contains_key((sender.clone(),receiver.clone())), "Channel already opened");
           ensure!(sender.clone() != receiver.clone(), "Channel should connect two different accounts");
+          let nonce = Nonce::<T>::get((sender.clone(),receiver.clone()));
           let time = T::Timestamp::now();
           let duration_in_mills = duration * 1000;
           let expiration = time.saturating_add(duration_in_mills.into());
           let chan = ChannelOf::<T>{
               sender: sender.clone(),
               receiver: receiver.clone(),
+              nonce: nonce.clone(),
               opened: time.clone(),
               expiration: expiration.clone(),
           };
           Channel::<T>::insert((sender.clone(),receiver.clone()), chan);
-          Self::deposit_event(RawEvent::ChannelOpened(sender,receiver,time,expiration));
+          Nonce::<T>::mutate((sender.clone(),receiver.clone()),|v|*v+1);
+          Self::deposit_event(RawEvent::ChannelOpened(sender,receiver,nonce, time,expiration));
           Ok(())
       }
 
@@ -95,8 +101,8 @@ decl_module! {
       }
 
       #[weight = 10_000]
-      // TODO: avoid replay attack; need add a nonce(different than micropayment nonce) for each channel opened between (sender,receiver)
-      pub fn claim_payment(origin, sender: T::AccountId, nonce: u32, amount: BalanceOf<T>, signature: Vec<u8>) -> DispatchResult {
+      // TODO: avoid replay attack; need add a nonce for each channel opened between (sender,receiver)
+      pub fn claim_payment(origin, sender: T::AccountId, session_id: u32, amount: BalanceOf<T>, signature: Vec<u8>) -> DispatchResult {
           let receiver = ensure_signed(origin)?;
           ensure!(Channel::<T>::contains_key((sender.clone(),receiver.clone())), "Channel not exists");
 
@@ -110,11 +116,11 @@ decl_module! {
               return Ok(());
           }
 
-          ensure!(!Nonce::<T>::contains_key((sender.clone(),receiver.clone()),nonce), "Nonce already consumed");
-          Self::verify_signature(&sender, &receiver, nonce, amount, &signature)?;
+          ensure!(!SessionId::<T>::contains_key((sender.clone(),receiver.clone()),session_id), "SessionID already consumed");
+          Self::verify_signature(&sender, &receiver, chan.nonce, session_id, amount, &signature)?;
 
           T::Currency::transfer(&sender, &receiver, amount, AllowDeath)?; // TODO: check what is AllowDeath
-          Nonce::<T>::insert((sender.clone(),receiver.clone()), nonce, true); // mark nonce as used
+          SessionId::<T>::insert((sender.clone(),receiver.clone()), session_id, true); // mark session_id as used
           Self::deposit_event(RawEvent::ClaimPayment(sender, receiver, amount));
           Ok(())
       }
@@ -123,19 +129,20 @@ decl_module! {
 
 impl<T: Trait> Module<T> {
     fn _close_channel(sender: &T::AccountId, receiver: &T::AccountId) {
-        // remove all the nonce of given channel
-        Nonce::<T>::remove_prefix((sender.clone(), receiver.clone()));
+        // remove all the sesson_ids of given channel
+        SessionId::<T>::remove_prefix((sender.clone(), receiver.clone()));
         Channel::<T>::remove((sender.clone(), receiver.clone()));
     }
 
-    // verify signature, signature is on hash of |receiver_addr|nonce|amount|
-    // nonce represents session_id, during one session, a sender can send multiple accumulated
-    // micropayments with the same nonce; the receiver can only claim one payment of the same
-    // nonce, i.e. the latest accumulated micropayment.
+    // verify signature, signature is on hash of |receiver_addr|nonce|session_id|amount|
+    // during one session_id, a sender can send multiple accumulated
+    // micropayments with the same session_id; the receiver can only claim one payment of the same
+    // session_id, i.e. the latest accumulated micropayment.
     pub fn verify_signature(
         sender: &T::AccountId,
         receiver: &T::AccountId,
-        nonce: u32,
+        nonce: u64,
+        session_id: u32,
         amount: BalanceOf<T>,
         signature: &Vec<u8>,
     ) -> DispatchResult {
@@ -147,7 +154,7 @@ impl<T: Trait> Module<T> {
         sig.copy_from_slice(&signature);
         let sig = sr25519::Signature::from_slice(&sig);
 
-        let msg = Self::construct_byte_array_and_hash(&receiver, nonce, amount);
+        let msg = Self::construct_byte_array_and_hash(&receiver, nonce, session_id, amount);
 
         let verified = sr25519_verify(&sig, &msg, &pub_key);
         ensure!(verified, "Fail to verify signature");
@@ -155,15 +162,17 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
-    // construct data from |receiver_addr|nonce|amount| and hash it
+    // construct data from |receiver_addr|session_id|amount| and hash it
     fn construct_byte_array_and_hash(
         address: &T::AccountId,
-        nonce: u32,
+        nonce: u64,
+        session_id: u32,
         amount: BalanceOf<T>,
     ) -> [u8; 32] {
         let mut data = Vec::new();
         data.extend_from_slice(&address.encode());
         data.extend_from_slice(&nonce.to_be_bytes());
+        data.extend_from_slice(&session_id.to_be_bytes());
         data.extend_from_slice(&amount.encode());
         let hash = sp_io::hashing::blake2_256(&data);
         hash
@@ -180,7 +189,8 @@ mod tests {
             142, 175, 4, 21, 22, 135, 115, 99, 38, 201, 254, 161, 126, 37, 252, 82, 135, 97, 54,
             147, 201, 18, 144, 156, 178, 38, 170, 71, 148, 242, 106, 72,
         ];
-        let nonce: u32 = 22;
+        let session_id: u32 = 22;
+        let nonce: u64 = 5;
         let amount: u128 = 100;
         let mut data = Vec::new();
 
@@ -190,7 +200,7 @@ mod tests {
         ];
 
         data.extend_from_slice(&bob);
-        data.extend_from_slice(&nonce.to_be_bytes());
+        data.extend_from_slice(&session_id.to_be_bytes());
         data.extend_from_slice(&amount.to_be_bytes());
         let hash = sp_io::hashing::blake2_256(&data);
         assert_eq!(&hash, &should_be);
