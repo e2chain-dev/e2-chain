@@ -49,8 +49,8 @@ pub use erc20;
 /// Import the deeper-node pallet
 pub use deeper_node;
 
-/// Import the deeper-micropay-channel pallet
-pub use deeper_micropay_channel;
+/// Import the micropayment pallet
+pub use micropayment;
 
 /// An index to a block.
 pub type BlockNumber = u32;
@@ -283,7 +283,7 @@ impl deeper_node::Trait for Runtime {
     type Currency = Balances;
 }
 
-impl deeper_micropay_channel::Trait for Runtime {
+impl micropayment::Trait for Runtime {
     type Event = Event;
     type Currency = Balances;
     type Timestamp = Timestamp;
@@ -308,7 +308,7 @@ construct_runtime!(
         TemplateModule: template::{Module, Call, Storage, Event<T>},
         Erc20: erc20::{Module, Call, Storage, Event<T>},
         DeeperNode: deeper_node::{Module, Call, Storage, Event<T>},
-        DeeperMicropayChannel: deeper_micropay_channel::{Module, Call, Storage, Event<T>},
+        Micropayment: micropayment::{Module, Call, Storage, Event<T>},
     }
 );
 

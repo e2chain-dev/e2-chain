@@ -1197,10 +1197,10 @@ dependencies = [
  "frame-system-rpc-runtime-api",
  "pallet-aura",
  "pallet-balances",
- "pallet-deeper-micropay-channel",
  "pallet-deeper-node",
  "pallet-erc20",
  "pallet-grandpa",
+ "pallet-micropayment",
  "pallet-randomness-collective-flip",
  "pallet-sudo",
  "pallet-template",
@@ -3650,19 +3650,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-deeper-micropay-channel"
-version = "2.0.0-rc6"
-dependencies = [
- "blake2-rfc",
- "frame-support",
- "frame-system",
- "parity-scale-codec",
- "sp-core",
- "sp-io",
- "sp-runtime",
-]
-
-[[package]]
 name = "pallet-deeper-node"
 version = "2.0.0-rc6"
 dependencies = [
@@ -3720,6 +3707,19 @@ dependencies = [
  "sp-session",
  "sp-staking",
  "sp-std",
+]
+
+[[package]]
+name = "pallet-micropayment"
+version = "2.0.0-rc6"
+dependencies = [
+ "blake2-rfc",
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
 ]
 
 [[package]]

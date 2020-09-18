@@ -1,6 +1,6 @@
 [package]
-name = "pallet-deeper-micropay-channel"
-description = 'deeper micropay channel pallet'
+name = "pallet-micropayment"
+description = 'deeper micropayment pallet'
 edition = '2018'
 authors = ["deeper dev"]
 version = '2.0.0-rc6'
