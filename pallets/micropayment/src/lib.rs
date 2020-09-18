@@ -13,7 +13,7 @@ pub trait Trait: frame_system::Trait {
     /// Because this pallet emits events, it depends on the runtime's definition of an event.
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
     type Currency: Currency<Self::AccountId>;
-    type Timestamp: Time + From<u64>;
+    type Timestamp: Time;
 }
 
 type BalanceOf<T> =
@@ -83,7 +83,8 @@ decl_module! {
               expiration: expiration.clone(),
           };
           Channel::<T>::insert((sender.clone(),receiver.clone()), chan);
-          Nonce::<T>::mutate((sender.clone(),receiver.clone()),|v|*v+1);
+          Nonce::<T>::insert((sender.clone(),receiver.clone()),nonce+1);
+          //Nonce::<T>::mutate((sender.clone(),receiver.clone()),|v|*v+1);
           Self::deposit_event(RawEvent::ChannelOpened(sender,receiver,nonce, time,expiration));
           Ok(())
       }
@@ -101,7 +102,6 @@ decl_module! {
       }
 
       #[weight = 10_000]
-      // TODO: avoid replay attack; need add a nonce for each channel opened between (sender,receiver)
       pub fn claim_payment(origin, sender: T::AccountId, session_id: u32, amount: BalanceOf<T>, signature: Vec<u8>) -> DispatchResult {
           let receiver = ensure_signed(origin)?;
           ensure!(Channel::<T>::contains_key((sender.clone(),receiver.clone())), "Channel not exists");

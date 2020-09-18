@@ -14,4 +14,4 @@
 
 *.txt
 *.bak
-tests/
+node_modules/
