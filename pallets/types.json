@@ -10,6 +10,8 @@
   "ChannelOf": {
     "sender": "AccountId",
     "receiver": "AccountId",
+    "opened": "Timestamp",
     "expiration": "Timestamp"
   }
 }
+

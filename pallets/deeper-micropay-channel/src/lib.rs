@@ -6,6 +6,7 @@ use frame_support::{decl_event, decl_module, decl_storage, dispatch::DispatchRes
 use frame_system::{self, ensure_signed};
 use sp_core::sr25519;
 use sp_io::crypto::sr25519_verify;
+use sp_runtime::traits::Saturating;
 
 /// Configure the pallet by specifying the parameters and types on which it depends.
 pub trait Trait: frame_system::Trait {
@@ -23,10 +24,12 @@ type Moment<T> = <<T as Trait>::Timestamp as Time>::Moment;
 type ChannelOf<T> = Chan<<T as frame_system::Trait>::AccountId, Moment<T>>;
 
 // struct to store the registered Device Informatin
+// TODO: use blockNumber instead of timestamp
 #[derive(Decode, Encode, Default)]
 pub struct Chan<AccountId, Timestamp> {
     sender: AccountId,
     receiver: AccountId,
+    opened: Timestamp,
     expiration: Timestamp,
 }
 
@@ -38,7 +41,7 @@ decl_event!(
         Timestamp = Moment<T>,
         Balance = BalanceOf<T>,
     {
-        ChannelOpened(AccountId, AccountId, Timestamp),
+        ChannelOpened(AccountId, AccountId, Timestamp, Timestamp),
         ChannelClosed(AccountId, AccountId, Timestamp),
         ClaimPayment(AccountId, AccountId, Balance),
     }
@@ -60,41 +63,52 @@ decl_module! {
       fn deposit_event() = default;
 
       #[weight = 10_000]
-      pub fn open_channel(origin, receiver: T::AccountId) -> DispatchResult {
+      // duration is in units of second
+      pub fn open_channel(origin, receiver: T::AccountId, duration: u32) -> DispatchResult {
           let sender = ensure_signed(origin)?;
           ensure!(!Channel::<T>::contains_key((sender.clone(),receiver.clone())), "Channel already opened");
           ensure!(sender.clone() != receiver.clone(), "Channel should connect two different accounts");
           let time = T::Timestamp::now();
+          let duration_in_mills = duration * 1000;
+          let expiration = time.saturating_add(duration_in_mills.into());
           let chan = ChannelOf::<T>{
               sender: sender.clone(),
               receiver: receiver.clone(),
-              expiration: time.clone(),
+              opened: time.clone(),
+              expiration: expiration.clone(),
           };
           Channel::<T>::insert((sender.clone(),receiver.clone()), chan);
-          Self::deposit_event(RawEvent::ChannelOpened(sender,receiver, time));
+          Self::deposit_event(RawEvent::ChannelOpened(sender,receiver,time,expiration));
           Ok(())
       }
 
       #[weight = 10_000]
-      // make sure claim your payment before close the channel, TODO: add safty guard
+      // make sure claim your payment before close the channel
       pub fn close_channel(origin, sender: T::AccountId) -> DispatchResult {
           // only receiver can close the channel
           let receiver = ensure_signed(origin)?;
           ensure!(Channel::<T>::contains_key((sender.clone(),receiver.clone())), "Channel not exists");
-
-          // remove all the nonce of given channel
-          Nonce::<T>::remove_prefix((sender.clone(),receiver.clone()));
-          Channel::<T>::remove((sender.clone(),receiver.clone()));
+          Self::_close_channel(&sender, &receiver);
           let time = T::Timestamp::now();
-          Self::deposit_event(RawEvent::ChannelClosed(sender,receiver, time));
-
+          Self::deposit_event(RawEvent::ChannelClosed(sender, receiver, time));
           Ok(())
       }
 
       #[weight = 10_000]
+      // TODO: avoid replay attack; need add a nonce(different than micropayment nonce) for each channel opened between (sender,receiver)
       pub fn claim_payment(origin, sender: T::AccountId, nonce: u32, amount: BalanceOf<T>, signature: Vec<u8>) -> DispatchResult {
           let receiver = ensure_signed(origin)?;
           ensure!(Channel::<T>::contains_key((sender.clone(),receiver.clone())), "Channel not exists");
+
+
+          // close channel if it expires
+          let chan = Channel::<T>::get((sender.clone(),receiver.clone()));
+          if chan.expiration < T::Timestamp::now() {
+              Self::_close_channel(&sender, &receiver);
+              let time = T::Timestamp::now();
+              Self::deposit_event(RawEvent::ChannelClosed(sender, receiver, time));
+              return Ok(());
+          }
 
           ensure!(!Nonce::<T>::contains_key((sender.clone(),receiver.clone()),nonce), "Nonce already consumed");
           Self::verify_signature(&sender, &receiver, nonce, amount, &signature)?;
@@ -108,7 +122,13 @@ decl_module! {
 }
 
 impl<T: Trait> Module<T> {
-    // TODO: verify signature, signature is on hash of |receiver_addr|nonce|amount|
+    fn _close_channel(sender: &T::AccountId, receiver: &T::AccountId) {
+        // remove all the nonce of given channel
+        Nonce::<T>::remove_prefix((sender.clone(), receiver.clone()));
+        Channel::<T>::remove((sender.clone(), receiver.clone()));
+    }
+
+    // verify signature, signature is on hash of |receiver_addr|nonce|amount|
     // nonce represents session_id, during one session, a sender can send multiple accumulated
     // micropayments with the same nonce; the receiver can only claim one payment of the same
     // nonce, i.e. the latest accumulated micropayment.
