@@ -67,6 +67,7 @@ decl_module! {
 
       #[weight = 10_000]
       // duration is in units of second
+      // TODO: reserve enough tokens for micropayment when open the channel
       pub fn open_channel(origin, receiver: T::AccountId, duration: u32) -> DispatchResult {
           let sender = ensure_signed(origin)?;
           ensure!(!Channel::<T>::contains_key((sender.clone(),receiver.clone())), "Channel already opened");
@@ -91,6 +92,7 @@ decl_module! {
 
       #[weight = 10_000]
       // make sure claim your payment before close the channel
+      // TODO: refund the rest of reserved tokens back to sender
       pub fn close_channel(origin, sender: T::AccountId) -> DispatchResult {
           // only receiver can close the channel
           let receiver = ensure_signed(origin)?;
@@ -102,6 +104,7 @@ decl_module! {
       }
 
       #[weight = 10_000]
+      // TODO: instead of transfer from sender, transfer from sender's reserved token
       pub fn claim_payment(origin, sender: T::AccountId, session_id: u32, amount: BalanceOf<T>, signature: Vec<u8>) -> DispatchResult {
           let receiver = ensure_signed(origin)?;
           ensure!(Channel::<T>::contains_key((sender.clone(),receiver.clone())), "Channel not exists");
