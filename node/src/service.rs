@@ -143,7 +143,6 @@ pub fn new_full(config: Configuration) -> Result<TaskManager, ServiceError> {
     let prometheus_registry = config.prometheus_registry().cloned();
     let telemetry_connection_sinks = sc_service::TelemetryConnectionSinks::default();
 
-    let inherent_data_providers = sp_inherents::InherentDataProviders::new();
     let rpc_extensions_builder = {
         let client = client.clone();
         let pool = transaction_pool.clone();
