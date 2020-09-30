@@ -165,16 +165,10 @@ fn testnet_genesis(
                 .collect(),
         }),
         pallet_babe: Some(BabeConfig {
-            authorities: initial_authorities
-                .iter()
-                .map(|x| (x.2.clone(), 1))
-                .collect(),
+            authorities: vec![],
         }),
         pallet_grandpa: Some(GrandpaConfig {
-            authorities: initial_authorities
-                .iter()
-                .map(|x| (x.3.clone(), 1))
-                .collect(),
+            authorities: vec![],
         }),
         pallet_sudo: Some(SudoConfig {
             // Assign network admin rights.
