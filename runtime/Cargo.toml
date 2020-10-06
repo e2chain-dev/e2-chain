@@ -65,6 +65,28 @@ tag = 'v2.0.0-rc6'
 version = '2.0.0-rc6'
 features = ["historical"]
 
+[dependencies.pallet-treasury]
+default-features = false
+git = 'https://github.com/paritytech/substrate.git'
+tag = 'v2.0.0-rc6'
+version = '2.0.0-rc6'
+
+
+
+[dependencies.pallet-staking]
+default-features = false
+git = 'https://github.com/paritytech/substrate.git'
+tag = 'v2.0.0-rc6'
+version = '2.0.0-rc6'
+
+[dependencies.pallet-staking-reward-curve]
+default-features = false
+git = 'https://github.com/paritytech/substrate.git'
+tag = 'v2.0.0-rc6'
+version = '2.0.0-rc6'
+
+
+
 [dependencies.pallet-randomness-collective-flip]
 default-features = false
 git = 'https://github.com/paritytech/substrate.git'
@@ -148,6 +170,13 @@ git = 'https://github.com/paritytech/substrate.git'
 tag = 'v2.0.0-rc6'
 version = '2.0.0-rc6'
 
+[dependencies.sp-staking]
+default-features = false
+git = 'https://github.com/paritytech/substrate.git'
+tag = 'v2.0.0-rc6'
+version = '2.0.0-rc6'
+
+
 [dependencies.sp-std]
 default-features = false
 git = 'https://github.com/paritytech/substrate.git'
@@ -206,6 +235,7 @@ std = [
     'pallet-timestamp/std',
     'pallet-transaction-payment/std',
     'pallet-transaction-payment-rpc-runtime-api/std',
+    'pallet-treasury/std',
     'serde',
     'sp-api/std',
     'sp-block-builder/std',
@@ -215,6 +245,8 @@ std = [
     'sp-offchain/std',
     'sp-runtime/std',
     'sp-session/std',
+    'sp-staking/std',
+    'pallet-staking/std',
     'sp-std/std',
     'sp-transaction-pool/std',
     'sp-version/std',
