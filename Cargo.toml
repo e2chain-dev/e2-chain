@@ -8,5 +8,6 @@ members = [
     'pallets/erc20',
     'pallets/deeper-node',
     'pallets/micropayment',
+    'pallets/credit',
     'runtime',
 ]

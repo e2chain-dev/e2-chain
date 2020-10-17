@@ -58,6 +58,9 @@ pub use deeper_node;
 /// Import the micropayment pallet
 pub use micropayment;
 
+// Import the credit pallet
+pub use credit;
+
 /// An index to a block. at least 400 years, long enough since we are all dead
 pub type BlockNumber = u32;
 
@@ -359,6 +362,10 @@ impl micropayment::Trait for Runtime {
     type Timestamp = Timestamp;
 }
 
+impl credit::Trait for Runtime {
+    type Event = Event;
+}
+
 impl pallet_session::Trait for Runtime {
     type Event = Event;
     type ValidatorId = <Self as frame_system::Trait>::AccountId;
@@ -453,6 +460,7 @@ construct_runtime!(
         Erc20: erc20::{Module, Call, Storage, Event<T>},
         DeeperNode: deeper_node::{Module, Call, Storage, Event<T>},
         Micropayment: micropayment::{Module, Call, Storage, Event<T>},
+        Credit: credit::{Module, Call, Storage, Event<T>},
 
         // important pallets from node
         Babe: pallet_babe::{Module, Call, Storage, Config, Inherent, ValidateUnsigned},

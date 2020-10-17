@@ -219,6 +219,12 @@ package = 'pallet-micropayment'
 path = '../pallets/micropayment'
 version = '2.0.0-rc6'
 
+[dependencies.credit]
+default-features = false
+package = 'pallet-credit'
+path = '../pallets/credit'
+version = '2.0.0-rc6'
+
 [features]
 default = ['std']
 std = [

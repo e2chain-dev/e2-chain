@@ -1197,6 +1197,7 @@ dependencies = [
  "frame-system-rpc-runtime-api",
  "pallet-babe",
  "pallet-balances",
+ "pallet-credit",
  "pallet-deeper-node",
  "pallet-erc20",
  "pallet-grandpa",
@@ -3658,6 +3659,18 @@ dependencies = [
  "serde",
  "sp-runtime",
  "sp-std",
+]
+
+[[package]]
+name = "pallet-credit"
+version = "2.0.0-rc6"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
 ]
 
 [[package]]
