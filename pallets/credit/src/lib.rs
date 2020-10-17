@@ -89,7 +89,7 @@ decl_module! {
         #[weight = 10_000]
         pub fn update_credit(origin, credit: CreditScore) -> dispatch::DispatchResult {
             let sender = ensure_signed(origin)?;
-            ensure!(UserCredit::<T>::contains_key(sender.clone()), "AccountId is  already existed");
+            ensure!(UserCredit::<T>::contains_key(sender.clone()), "AccountId is uninitilized");
             UserCredit::<T>::insert(sender.clone(), credit);
             Ok(())
         }
