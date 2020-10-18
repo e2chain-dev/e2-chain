@@ -1199,6 +1199,7 @@ dependencies = [
  "pallet-balances",
  "pallet-credit",
  "pallet-deeper-node",
+ "pallet-delegating",
  "pallet-erc20",
  "pallet-grandpa",
  "pallet-micropayment",
@@ -3681,6 +3682,20 @@ dependencies = [
  "frame-system",
  "parity-scale-codec",
  "sp-core",
+]
+
+[[package]]
+name = "pallet-delegating"
+version = "2.0.0-rc6"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "log",
+ "parity-scale-codec",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
 ]
 
 [[package]]

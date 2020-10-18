@@ -225,6 +225,12 @@ package = 'pallet-credit'
 path = '../pallets/credit'
 version = '2.0.0-rc6'
 
+[dependencies.delegating]
+default-features = false
+package = 'pallet-delegating'
+path = '../pallets/delegating'
+version = '2.0.0-rc6'
+
 [features]
 default = ['std']
 std = [
@@ -257,6 +263,7 @@ std = [
     'sp-transaction-pool/std',
     'sp-version/std',
     'template/std',
+    'delegating/std',
 ]
 
 [build-dependencies.wasm-builder-runner]

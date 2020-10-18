@@ -22,6 +22,7 @@ rpc_port=$((9933+$2))
 if [ ! -z "$3" ]
 then 
     echo "starting node $1 ..."
+    echo "boot node :  $3 "
     $program  --base-path /tmp/$1 \
     --chain ./private_chain/customSpecRaw.json \
     --port $port \
