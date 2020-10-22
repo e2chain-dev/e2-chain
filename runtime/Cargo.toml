@@ -92,6 +92,13 @@ package = 'pallet-authorship'
 tag = 'v2.0.0-rc6'
 version = '2.0.0-rc6'
 
+[dependencies.pallet-utility]
+default-features = false
+git = 'https://github.com/paritytech/substrate.git'
+package = 'pallet-utility'
+tag = 'v2.0.0-rc6'
+version = '2.0.0-rc6'
+
 
 
 [dependencies.pallet-randomness-collective-flip]
@@ -244,6 +251,7 @@ std = [
     'pallet-transaction-payment-rpc-runtime-api/std',
     'pallet-treasury/std',
     'pallet-authorship/std',
+    'pallet-utility/std',
     'serde',
     'sp-api/std',
     'sp-block-builder/std',

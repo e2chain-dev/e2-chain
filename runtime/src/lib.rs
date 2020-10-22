@@ -30,6 +30,8 @@ use sp_std::prelude::*;
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 
+mod weights;
+
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
     construct_runtime, parameter_types,
@@ -445,6 +447,12 @@ impl pallet_authorship::Trait for Runtime {
     type EventHandler = Staking; // (Staking, ImOnline)
 }
 
+impl pallet_utility::Trait for Runtime {
+    type Event = Event;
+    type Call = Call;
+    type WeightInfo = weights::pallet_utility::WeightInfo;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
     pub enum Runtime where
@@ -471,6 +479,7 @@ construct_runtime!(
         Session: pallet_session::{Module, Call, Storage, Event, Config<T>},
         Historical: pallet_session_historical::{Module},
         Authorship: pallet_authorship::{Module, Call, Storage, Inherent},
+        Utility: pallet_utility::{Module, Call, Event},
 
     }
 );
