@@ -434,6 +434,17 @@ impl pallet_staking::Trait for Runtime {
     type WeightInfo = ();
 }
 
+parameter_types! {
+    pub const UncleGenerations: BlockNumber = 5;
+}
+
+impl pallet_authorship::Trait for Runtime {
+    type FindAuthor = pallet_session::FindAccountFromAuthorIndex<Self, Babe>;
+    type UncleGenerations = UncleGenerations;
+    type FilterUncle = ();
+    type EventHandler = Staking; // (Staking, ImOnline)
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
     pub enum Runtime where
@@ -459,6 +470,7 @@ construct_runtime!(
         Staking: pallet_staking::{Module, Call, Config<T>, Storage, Event<T>, ValidateUnsigned},
         Session: pallet_session::{Module, Call, Storage, Event, Config<T>},
         Historical: pallet_session_historical::{Module},
+        Authorship: pallet_authorship::{Module, Call, Storage, Inherent},
 
     }
 );

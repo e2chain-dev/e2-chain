@@ -1195,6 +1195,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "frame-system-rpc-runtime-api",
+ "pallet-authorship",
  "pallet-babe",
  "pallet-balances",
  "pallet-deeper-node",
