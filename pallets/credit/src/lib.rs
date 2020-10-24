@@ -30,7 +30,7 @@ decl_storage! {
     // ---------------------------------vvvvvvvvvvvvvv
     trait Store for Module<T: Trait> as Credit {
         //store credit score using map
-		pub UserCredit get(fn get_user_credit): map hasher(blake2_128_concat) T::AccountId => CreditScore;
+		pub UserCredit get(fn get_user_credit): map hasher(blake2_128_concat) T::AccountId => Option<u64>;
     }
 }
 
@@ -78,7 +78,7 @@ decl_module! {
 
         // init credit score
         #[weight = 10_000]
-        pub fn initilize_credit(origin, credit: CreditScore) -> dispatch::DispatchResult{
+        pub fn initilize_credit(origin, credit: u64) -> dispatch::DispatchResult{
             let sender = ensure_signed(origin)?;
             ensure!(!UserCredit::<T>::contains_key(sender.clone()), "Credit Score of AccountId  already Initilized");
             UserCredit::<T>::insert(sender.clone(), credit);
@@ -87,7 +87,7 @@ decl_module! {
 
         // update credit score
         #[weight = 10_000]
-        pub fn update_credit(origin, credit: CreditScore) -> dispatch::DispatchResult {
+        pub fn update_credit(origin, credit: u64) -> dispatch::DispatchResult {
             let sender = ensure_signed(origin)?;
             ensure!(UserCredit::<T>::contains_key(sender.clone()), "AccountId is uninitilized");
             UserCredit::<T>::insert(sender.clone(), credit);
