@@ -7,7 +7,7 @@
       "request": "launch",
       "program": "${workspaceRoot}/target/debug/e2-chain",
       "args": [
-        "--base-path=/tmp/alice",
+        "--base-path=/tmp/local",
         "--chain=local",
         "--alice",
         "--port=30333",

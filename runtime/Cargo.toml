@@ -99,6 +99,35 @@ package = 'pallet-utility'
 tag = 'v2.0.0-rc6'
 version = '2.0.0-rc6'
 
+[dependencies.pallet-offences]
+default-features = false
+git = 'https://github.com/paritytech/substrate.git'
+package = 'pallet-offences'
+tag = 'v2.0.0-rc6'
+version = '2.0.0-rc6'
+
+[dependencies.pallet-indices]
+default-features = false
+git = 'https://github.com/paritytech/substrate.git'
+package = 'pallet-indices'
+tag = 'v2.0.0-rc6'
+version = '2.0.0-rc6'
+
+[dependencies.node-primitives]
+default-features = false
+git = 'https://github.com/paritytech/substrate.git'
+package = 'node-primitives'
+tag = 'v2.0.0-rc6'
+version = '2.0.0-rc6'
+
+
+
+
+[dependencies.sp-application-crypto]
+default-features = false
+git = 'https://github.com/paritytech/substrate.git'
+tag = 'v2.0.0-rc6'
+version = '2.0.0-rc6'
 
 
 [dependencies.pallet-randomness-collective-flip]
@@ -252,6 +281,7 @@ std = [
     'pallet-treasury/std',
     'pallet-authorship/std',
     'pallet-utility/std',
+    'pallet-indices/std',
     'serde',
     'sp-api/std',
     'sp-block-builder/std',
@@ -263,6 +293,7 @@ std = [
     'sp-session/std',
     'sp-staking/std',
     'pallet-staking/std',
+    'node-primitives/std',
     'sp-std/std',
     'sp-transaction-pool/std',
     'sp-version/std',

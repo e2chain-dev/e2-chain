@@ -5,7 +5,10 @@
     "bootNodes": [],
     "telemetryEndpoints": null,
     "protocolId": null,
-    "properties": null,
+    "properties": {
+        "tokenDecimals": 12,
+        "tokenSymbol": "DPR"
+    },
     "consensusEngine": null,
     "genesis": {
         "runtime": {
@@ -18,62 +21,20 @@
             },
             "palletBalances": {
                 "balances": [
-                    [
-                        "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
-                        1152921504606846976
-                    ],
-                    [
-                        "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
-                        1152921504606846976
-                    ],
-                    [
-                        "5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y",
-                        1152921504606846976
-                    ],
-                    [
-                        "5DAAnrj7VHTznn2AWBemMuyBwZWs6FNFjdyVXUeYum3PTXFy",
-                        1152921504606846976
-                    ],
-                    [
-                        "5HGjWAeFDfFCWPsjFQdVV2Msvz2XtMktvgocEZcCj68kUMaw",
-                        1152921504606846976
-                    ],
-                    [
-                        "5CiPPseXPECbkjWCa6MnjNokrgYjMqmKndv2rSnekmSK2DjL",
-                        1152921504606846976
-                    ],
-                    [
-                        "5GNJqTPyNqANBkUVMN1LPPrxXnFouWXoe2wNSmmEoLctxiZY",
-                        1152921504606846976
-                    ],
-                    [
-                        "5HpG9w8EBLe5XCrbczpwq5TSXvedjrBGCwqxK1iQ7qUsSWFc",
-                        1152921504606846976
-                    ],
-                    [
-                        "5Ck5SLSHYac6WFt5UZRSsdJjwmpSZq85fd5TRNAdZQVzEAPT",
-                        1152921504606846976
-                    ],
-                    [
-                        "5HKPmK9GYtE1PSLsS1qiYU9xQ9Si1NcEhdeCq9sw5bqu4ns8",
-                        1152921504606846976
-                    ],
-                    [
-                        "5FCfAonRZgTFrTd9HREEyeJjDpT397KMzizE6T3DvebLFE7n",
-                        1152921504606846976
-                    ],
-                    [
-                        "5CRmqmsiNFExV6VbdmPJViVxrWmkaXXvBrSX8oqBT8R9vmWk",
-                        1152921504606846976
-                    ],
-                    [
-                        "5FheDAbf9FhvCpHjSBSuuXspb5nwJwSUSrfnJMvDvhGrTh1r",
-                        9000000000000000099999
-                    ],
-                    [
-                        "5C4xaPznTFhENxuEqbuRMLh7aKuV3Jb8neRFLtV6dRM6xPs1",
-                        9000000000000000099999
-                    ]
+                    ["5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY", 1152921504606846976],
+                    ["5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty", 1152921504606846976],
+                    ["5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y", 1152921504606846976],
+                    ["5DAAnrj7VHTznn2AWBemMuyBwZWs6FNFjdyVXUeYum3PTXFy", 1152921504606846976],
+                    ["5HGjWAeFDfFCWPsjFQdVV2Msvz2XtMktvgocEZcCj68kUMaw", 1152921504606846976],
+                    ["5CiPPseXPECbkjWCa6MnjNokrgYjMqmKndv2rSnekmSK2DjL", 1152921504606846976],
+                    ["5GNJqTPyNqANBkUVMN1LPPrxXnFouWXoe2wNSmmEoLctxiZY", 1152921504606846976],
+                    ["5HpG9w8EBLe5XCrbczpwq5TSXvedjrBGCwqxK1iQ7qUsSWFc", 1152921504606846976],
+                    ["5Ck5SLSHYac6WFt5UZRSsdJjwmpSZq85fd5TRNAdZQVzEAPT", 1152921504606846976],
+                    ["5HKPmK9GYtE1PSLsS1qiYU9xQ9Si1NcEhdeCq9sw5bqu4ns8", 1152921504606846976],
+                    ["5FCfAonRZgTFrTd9HREEyeJjDpT397KMzizE6T3DvebLFE7n", 1152921504606846976],
+                    ["5CRmqmsiNFExV6VbdmPJViVxrWmkaXXvBrSX8oqBT8R9vmWk", 1152921504606846976],
+                    ["5FheDAbf9FhvCpHjSBSuuXspb5nwJwSUSrfnJMvDvhGrTh1r", 9000000000000000099999],
+                    ["5C4xaPznTFhENxuEqbuRMLh7aKuV3Jb8neRFLtV6dRM6xPs1", 9000000000000000099999]
                 ]
             },
             "palletSudo": {
@@ -86,33 +47,14 @@
                 "historyDepth": 84,
                 "validatorCount": 4,
                 "minimumValidatorCount": 2,
-                "invulnerables": [
-                    "5GNJqTPyNqANBkUVMN1LPPrxXnFouWXoe2wNSmmEoLctxiZY",
-                    "5HpG9w8EBLe5XCrbczpwq5TSXvedjrBGCwqxK1iQ7qUsSWFc",
-                    "5C4xaPznTFhENxuEqbuRMLh7aKuV3Jb8neRFLtV6dRM6xPs1"
-                ],
+                "invulnerables": ["5GNJqTPyNqANBkUVMN1LPPrxXnFouWXoe2wNSmmEoLctxiZY", "5HpG9w8EBLe5XCrbczpwq5TSXvedjrBGCwqxK1iQ7qUsSWFc", "5C4xaPznTFhENxuEqbuRMLh7aKuV3Jb8neRFLtV6dRM6xPs1"],
                 "forceEra": "NotForcing",
                 "slashRewardFraction": 100000000,
                 "canceledPayout": 0,
                 "stakers": [
-                    [
-                        "5GNJqTPyNqANBkUVMN1LPPrxXnFouWXoe2wNSmmEoLctxiZY",
-                        "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
-                        10000000000000000,
-                        "Validator"
-                    ],
-                    [
-                        "5HpG9w8EBLe5XCrbczpwq5TSXvedjrBGCwqxK1iQ7qUsSWFc",
-                        "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
-                        10000000000000000,
-                        "Validator"
-                    ],
-                    [
-                        "5C4xaPznTFhENxuEqbuRMLh7aKuV3Jb8neRFLtV6dRM6xPs1",
-                        "5FheDAbf9FhvCpHjSBSuuXspb5nwJwSUSrfnJMvDvhGrTh1r",
-                        10000000000099999,
-                        "Validator"
-                    ]
+                    ["5GNJqTPyNqANBkUVMN1LPPrxXnFouWXoe2wNSmmEoLctxiZY", "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY", 10000000000000000, "Validator"],
+                    ["5HpG9w8EBLe5XCrbczpwq5TSXvedjrBGCwqxK1iQ7qUsSWFc", "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty", 10000000000000000, "Validator"],
+                    ["5C4xaPznTFhENxuEqbuRMLh7aKuV3Jb8neRFLtV6dRM6xPs1", "5FheDAbf9FhvCpHjSBSuuXspb5nwJwSUSrfnJMvDvhGrTh1r", 10000000000099999, "Validator"]
                 ]
             },
             "palletSession": {

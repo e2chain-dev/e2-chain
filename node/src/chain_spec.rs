@@ -1,7 +1,7 @@
 use e2_chain_runtime::opaque::SessionKeys;
 use e2_chain_runtime::{
-    currency::DOLLARS, AccountId, BabeConfig, Balance, BalancesConfig, GenesisConfig,
-    GrandpaConfig, SessionConfig, Signature, StakerStatus, StakingConfig, SudoConfig, SystemConfig,
+    AccountId, BabeConfig, Balance, BalancesConfig, GenesisConfig, GrandpaConfig, IndicesConfig,
+    SessionConfig, Signature, StakerStatus, StakingConfig, SudoConfig, SystemConfig, DOLLARS,
     WASM_BINARY,
 };
 use sc_service::ChainType;
@@ -156,6 +156,7 @@ fn testnet_genesis(
             code: wasm_binary.to_vec(),
             changes_trie_config: Default::default(),
         }),
+        pallet_indices: Some(IndicesConfig { indices: vec![] }),
         pallet_balances: Some(BalancesConfig {
             // Configure endowed accounts with initial balance of 1 << 60.
             balances: endowed_accounts
