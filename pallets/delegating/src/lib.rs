@@ -11,48 +11,45 @@ mod mock;
 mod tests;
 use log::{info};
 
-use frame_support::{decl_module, decl_storage, decl_event, decl_error, Parameter, dispatch, traits::Get};
+use frame_support::codec::{Decode, Encode};
+use frame_support::{decl_module, decl_storage, decl_event, decl_error, dispatch,
+					traits::{Currency}};
 use frame_system::ensure_signed;
-// use sp_std::fmt::Debug;
-// use sp_runtime::{
-// 	RuntimeDebug, Perbill, DispatchError, Either, generic,
-// 	traits::{
-// 		self, CheckEqual, AtLeast32Bit, Zero, Lookup, LookupError,
-// 		SimpleBitOps, Hash, Member, MaybeDisplay, BadOrigin,
-// 		MaybeSerialize, MaybeSerializeDeserialize, MaybeMallocSizeOf, StaticLookup, One, Bounded,
-// 		Dispatchable, AtLeast32BitUnsigned
-// 	},
-// 	offchain::storage_lock::BlockNumberProvider,
-// };
 
 /// Configure the pallet by specifying the parameters and types on which it depends.
 pub trait Trait: frame_system::Trait  {
 	/// Because this pallet emits events, it depends on the runtime's definition of an event.
 	type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
+	type Currency: Currency<Self::AccountId>;
 }
 
 pub type EraIndex = u32;
-pub type CreditScore = u64;
 
-struct CreditScoreLedger<AccountId, CreditScore>
-
+#[derive( Default, Clone, Encode, Decode)]
+pub struct CreditScoreLedger<AccountId>
 {
-	account_id: AccountId,
-	credit_score: CreditScore,
+	delegated_account: AccountId,
+	delegated_score: u64,
+	withdraw_era: EraIndex
 }
 
 // The pallet's runtime storage items.
 // https://substrate.dev/docs/en/knowledgebase/runtime/storage
 decl_storage! {
-	trait Store for Module<T: Trait> as TemplateModule {
+	trait Store for Module<T: Trait> as Delegating  {
 		// Learn more about declaring storage items:
 		// https://substrate.dev/docs/en/knowledgebase/runtime/storage#declaring-storage-items
 		Something get(fn something): Option<u32>;
 
+		DelegatedScore get(fn delegated): map hasher(blake2_128_concat) T::AccountId  => u64;
+
 		// Delegators get(fn delegators): double_map hasher(twox_64_concat) EraIndex,
 		//  hasher(twox_64_concat) T::AccountId => Option<CreditScoreLedger<AccountId, CreditScore>>;
 
-		// RewordInEra get(fn reword):
+		CreditLedger get(fn credit_ledger): map hasher(blake2_128_concat) T::AccountId
+			=> Option<CreditScoreLedger<T::AccountId>>;
+
+		pub CurrentEra get(fn current_era): Option<EraIndex>;
 	}
 }
 
@@ -62,9 +59,8 @@ decl_event!(
 	pub enum Event<T> where AccountId = <T as frame_system::Trait>::AccountId {
 		/// Event documentation should end with an array that provides descriptive names for event
 		/// parameters. [something, who]
-		SomethingStored(u32, AccountId),
-		Delegated(AccountId, u32),
-		UnDelegated(AccountId, u32),
+		Delegated(AccountId, u64),
+		UnDelegated(AccountId, u64),
 	}
 );
 
@@ -75,6 +71,9 @@ decl_error! {
 		NoneValue,
 		/// Errors should have helpful documentation associated with them.
 		StorageOverflow,
+		AlreadyDelegated,
+		NotDelegate,
+
 	}
 }
 
@@ -89,15 +88,34 @@ decl_module! {
 		// Events must be initialized if they are used by the pallet.
 		fn deposit_event() = default;
 
-		#[weight = 10_000 + T::DbWeight::get().writes(1)]
-		pub fn delegate_score(origin, score: u32) -> dispatch::DispatchResult {
+		#[weight = 10_000]
+		//
+		pub fn delegate(origin, score: u64) -> dispatch::DispatchResult {
 			info!("[FLQ] will delegate score to validator ");
 
-			let stasher = ensure_signed(origin)?;
+			let controller = ensure_signed(origin)?;
 
-			Something::put(score);
+			if DelegatedScore::<T>::contains_key(controller.clone()) {
 
-			Self::deposit_event(RawEvent::Delegated(stasher, 186));
+				Err(Error::<T>::AlreadyDelegated)?
+			}
+
+			DelegatedScore::<T>::insert(controller.clone(), score);
+
+			let _ledger = CreditScoreLedger{
+				delegated_account: controller.clone(),
+				delegated_score: score,
+				withdraw_era: 0,
+			};
+
+			CreditLedger::<T>::insert(controller.clone(), _ledger);
+
+			if CreditLedger::<T>::contains_key(controller.clone()) {
+				info!("[FLQ] insert to ledger success .")
+			}
+
+
+			Self::deposit_event(RawEvent::Delegated(controller, score));
 
 			Ok(())
 		}
@@ -106,12 +124,41 @@ decl_module! {
 		pub fn get_delegated_score(origin) -> dispatch::DispatchResult {
 			info!("[FLQ] will get delegated score ");
 
-			let stasher = ensure_signed(origin)?;
+			let controller = ensure_signed(origin)?;
 
-			let score = Something::get().unwrap_or(0);
+			let score = DelegatedScore::<T>::get(controller.clone());
 
-			Self::deposit_event(RawEvent::Delegated(stasher, score));
+			Self::deposit_event(RawEvent::Delegated(controller, score));
 
+			Ok(())
+		}
+
+		#[weight = 10_000]
+		pub fn undelegate(origin) -> dispatch::DispatchResult {
+			info!("[FLQ] will withdraw credit score ");
+
+			let controller = ensure_signed(origin)?;
+
+			let score = DelegatedScore::<T>::get(controller.clone());
+
+			if !CreditLedger::<T>::contains_key(controller.clone()) {
+				info!("[FLQ]  credit ledger not found . will return err ");
+				Err(Error::<T>::NotDelegate)?
+			}
+
+			let current_era = CurrentEra::get().unwrap_or(0);
+			// TODO 赎回周期为 当前周期 + 信誉分锁定周期数（）
+			let withdraw_era = current_era + 1;
+
+			let _ledger = CreditScoreLedger{
+				delegated_account: controller.clone(),
+				delegated_score: score,
+				withdraw_era: withdraw_era,
+			};
+
+			CreditLedger::<T>::insert(controller.clone(),_ledger);
+
+			Self::deposit_event(RawEvent::UnDelegated(controller, score));
 			Ok(())
 		}
 	}

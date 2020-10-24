@@ -370,6 +370,7 @@ impl credit::Trait for Runtime {
 
 impl delegating::Trait for Runtime {
     type Event = Event;
+    type Currency = Balances;
 }
 
 impl pallet_session::Trait for Runtime {
