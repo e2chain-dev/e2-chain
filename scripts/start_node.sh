@@ -30,6 +30,7 @@ then
     --rpc-port $rpc_port \
     --validator \
     --rpc-methods=Unsafe \
+    --rpc-cors all \
     --name $1 \
     --bootnodes /ip4/127.0.0.1/tcp/30333/p2p/$3
 else
@@ -41,5 +42,6 @@ else
     --rpc-port $rpc_port \
     --validator \
     --rpc-methods=Unsafe \
+    --rpc-cors all \
     --name $1
 fi

@@ -217,7 +217,14 @@ In the key import step, we need import "babe" key instead of import "aura".
         # add new key from template
        ./chain_spec_gen.py -i first.json -o second.json
         # create raw config
-       ./target/debug/e2-chain build-spec --chain=second.json --raw --disable-default-bootnode > customSpecRaw.json
+       ../target/debug/e2-chain build-spec --chain=second.json --raw --disable-default-bootnode > customSpecRaw.json
+
+       # config chao.json  babe Account ID
+       subkey inspect --scheme sr25519 "talent indicate snap news awful vault broccoli fun inside curtain sing acid"
+       
+      # config chao_gran.json grandpa Account ID 
+       #  subkey inspect --scheme ed25519 "talent indicate snap news awful vault broccoli fun inside curtain sing acid"
+
     ```
 
     Start a private network
