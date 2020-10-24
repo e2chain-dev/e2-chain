@@ -215,7 +215,7 @@ In the key import step, we need import "babe" key instead of import "aura".
         # get template from "local" config
        ../target/debug/e2-chain build-spec --disable-default-bootnode --chain local > first.json
         # add new key from template
-       ./chain_spec_gen.py -i first.json -o second.json
+       ./chain_spec_gen.py -i first.json -o second.json 
         # create raw config
        ./target/debug/e2-chain build-spec --chain=second.json --raw --disable-default-bootnode > customSpecRaw.json
     ```

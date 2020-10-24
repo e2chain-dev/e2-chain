@@ -14,6 +14,8 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+type CreditScore = Option<u64>;
+
 /// Configure the pallet by specifying the parameters and types on which it depends.
 pub trait Trait: frame_system::Trait {
     /// Because this pallet emits events, it depends on the runtime's definition of an event.
