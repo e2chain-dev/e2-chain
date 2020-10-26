@@ -22,7 +22,7 @@ type BalanceOf<T> =
 pub struct Node<AccountId> {
     account_id: AccountId,
     ipv4: Vec<u8>,            // IP will not be exposed in future version
-    country: Option<Vec<u8>>, // country code, only server need this field
+    country: u16,
 }
 
 // events
@@ -33,107 +33,100 @@ decl_event!(
         //Balance = BalanceOf<T>,
     {
         // register node: AccountId, ipv4
-        RegisterNode(AccountId, Vec<u8>, Option<Vec<u8>>),
+        RegisterNode(AccountId, Vec<u8>, u16),
         UnregisterNode(AccountId),
 
         // add account into a country's server list
-        ServerAdded(AccountId, Vec<u8>),
+        ServerAdded(AccountId, u16),
         // remove account from a country's server list
-        ServerRemoved(AccountId, Vec<u8>),
+        ServerRemoved(AccountId, u16),
     }
 );
 
 // storage for this module
 decl_storage! {
-  trait Store for Module<T: Trait> as Device {
-      DeviceInfo get(fn get_device_info): map hasher(identity) T::AccountId => Node<T::AccountId>;
-      ServersByCountry get(fn get_servers_by_country): map hasher(identity) Vec<u8> => Vec<T::AccountId>;
-  }
-
+    trait Store for Module<T: Trait> as Device {
+        DeviceInfo get(fn get_device_info): map hasher(identity) T::AccountId => Node<T::AccountId>;
+        ServersByCountry get(fn get_servers_by_country): map hasher(identity) u16 => Vec<T::AccountId>;
+    }
 }
 
 // public interface for this runtime module
 decl_module! {
-  pub struct Module<T: Trait> for enum Call where origin: T::Origin {
-      // initialize the default event for this module
-      fn deposit_event() = default;
+    pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+        // initialize the default event for this module
+        fn deposit_event() = default;
 
-      #[weight = 10_000]
-      pub fn register_device(origin, ip: Vec<u8>, country: Option<Vec<u8>>) -> DispatchResult {
-          let sender = ensure_signed(origin)?;
-          ensure!(ip.len() == 4, "IPv4 has 4 bytes");
-          let node = Node {
-              account_id: sender.clone(),
-              ipv4: ip.clone(),
-              country: country.clone(),
-          };
-          T::Currency::reserve(&sender,BalanceOf::<T>::from(MIN_LOCK_AMT))?;
-          <DeviceInfo<T>>::insert(sender.clone(), node);
+        #[weight = 10_000]
+        pub fn register_device(origin, ip: Vec<u8>, country: u16) -> DispatchResult {
+            let sender = ensure_signed(origin)?;
+            let node = Node {
+                account_id: sender.clone(),
+                ipv4: ip.clone(),
+                country: country,
+            };
+            T::Currency::reserve(&sender,BalanceOf::<T>::from(MIN_LOCK_AMT))?;
+            <DeviceInfo<T>>::insert(sender.clone(), node);
 
-          Self::deposit_event(RawEvent::RegisterNode(sender, ip, country));
-          Ok(())
-      }
+            Self::deposit_event(RawEvent::RegisterNode(sender, ip, country));
+            Ok(())
+        }
 
-      #[weight = 10_000]
-      pub fn unregister_device(origin) -> DispatchResult {
-          let sender = ensure_signed(origin)?;
-          ensure!(<DeviceInfo<T>>::contains_key(sender.clone()), "device not registered!");
-          let node = <DeviceInfo<T>>::get(sender.clone());
-          if !node.country.is_none() {
-              let country = node.country.unwrap();
-              let _ = Self::try_remove_server(&sender, &country);
-          }
-          <DeviceInfo<T>>::remove(sender.clone());
-          T::Currency::unreserve(&sender,BalanceOf::<T>::from(MIN_LOCK_AMT));
-          Self::deposit_event(RawEvent::UnregisterNode(sender));
-          Ok(())
-      }
+        #[weight = 10_000]
+        pub fn unregister_device(origin) -> DispatchResult {
+            let sender = ensure_signed(origin)?;
+            ensure!(<DeviceInfo<T>>::contains_key(sender.clone()), "device not registered!");
+            let node = <DeviceInfo<T>>::get(sender.clone());
+            let country = node.country;
+            let _ = Self::try_remove_server(&sender, country);
+            <DeviceInfo<T>>::remove(sender.clone());
+            T::Currency::unreserve(&sender,BalanceOf::<T>::from(MIN_LOCK_AMT));
+            Self::deposit_event(RawEvent::UnregisterNode(sender));
+            Ok(())
+        }
 
+        #[weight = 10_000]
+        pub fn register_server(origin, country: u16) -> DispatchResult {
+            let sender = ensure_signed(origin)?;
+            ensure!(<DeviceInfo<T>>::contains_key(sender.clone()),
+                "sender device needs register first");
 
-      #[weight = 10_000]
-      pub fn register_server(origin, country: Vec<u8>) -> DispatchResult {
-          let sender = ensure_signed(origin)?;
-          ensure!(<DeviceInfo<T>>::contains_key(sender.clone()),
-              "sender device needs register first");
-          ensure!(country.len() == 2, "Country code has 2 byte");
+            let _ = Self::try_add_server(&sender, country);
 
-          let _ = Self::try_add_server(&sender, &country);
+            Ok(())
+        }
 
-          Ok(())
-      }
-
-      #[weight = 10_000]
-      pub fn unregister_server(origin, country: Vec<u8>) -> DispatchResult {
-          let sender = ensure_signed(origin)?;
-          ensure!(<DeviceInfo<T>>::contains_key(sender.clone()),
-              "sender device needs register first");
-          ensure!(country.len() == 2, "Country code has 2 byte");
-          let _ = Self::try_remove_server(&sender, &country);
-          Ok(())
-      }
-  }
+        #[weight = 10_000]
+        pub fn unregister_server(origin, country: u16) -> DispatchResult {
+            let sender = ensure_signed(origin)?;
+            ensure!(<DeviceInfo<T>>::contains_key(sender.clone()),
+                "sender device needs register first");
+            let _ = Self::try_remove_server(&sender, country);
+            Ok(())
+        }
+    }
 }
 
 impl<T: Trait> Module<T> {
     // try to remove an account from a country's server list if exists
-    fn try_remove_server(sender: &T::AccountId, country: &Vec<u8>) -> DispatchResult {
-        let mut server_list = <ServersByCountry<T>>::get(country.clone());
+    fn try_remove_server(sender: &T::AccountId, country: u16) -> DispatchResult {
+        let mut server_list = <ServersByCountry<T>>::get(country);
         if let Some(index) = server_list.iter().position(|x| *x == sender.clone()) {
             server_list.remove(index);
-            <ServersByCountry<T>>::insert(country.clone(), server_list);
-            Self::deposit_event(RawEvent::ServerRemoved(sender.clone(), country.clone()));
+            <ServersByCountry<T>>::insert(country, server_list);
+            Self::deposit_event(RawEvent::ServerRemoved(sender.clone(), country));
 
             // ensure consistency
             let mut node = <DeviceInfo<T>>::get(sender.clone());
-            node.country = None;
+            node.country = 0;
             <DeviceInfo<T>>::insert(sender.clone(), node);
         }
         Ok(())
     }
 
     // try to add an account to a country's server list; no double add
-    fn try_add_server(sender: &T::AccountId, country: &Vec<u8>) -> DispatchResult {
-        let mut server_list = <ServersByCountry<T>>::get(country.clone());
+    fn try_add_server(sender: &T::AccountId, country: u16) -> DispatchResult {
+        let mut server_list = <ServersByCountry<T>>::get(country);
 
         let cloned_sender = sender.clone();
         for item in &server_list {
@@ -141,12 +134,12 @@ impl<T: Trait> Module<T> {
         }
 
         server_list.push(cloned_sender);
-        <ServersByCountry<T>>::insert(country.clone(), server_list);
-        Self::deposit_event(RawEvent::ServerAdded(sender.clone(), country.clone()));
+        <ServersByCountry<T>>::insert(country, server_list);
+        Self::deposit_event(RawEvent::ServerAdded(sender.clone(), country));
 
         // ensure consistency
         let mut node = <DeviceInfo<T>>::get(sender.clone());
-        node.country = Some(country.clone());
+        node.country = country;
         <DeviceInfo<T>>::insert(sender.clone(), node);
 
         Ok(())
