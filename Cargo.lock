@@ -3691,6 +3691,8 @@ dependencies = [
  "frame-support",
  "frame-system",
  "log",
+ "pallet-credit",
+ "pallet-session",
  "parity-scale-codec",
  "sp-core",
  "sp-io",

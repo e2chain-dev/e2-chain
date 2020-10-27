@@ -15,15 +15,17 @@ use frame_support::codec::{Decode, Encode};
 use frame_support::{decl_module, decl_storage, decl_event, decl_error, dispatch,
 					traits::{Currency}};
 use frame_system::ensure_signed;
+use sp_std::vec::Vec;
 
 /// Configure the pallet by specifying the parameters and types on which it depends.
-pub trait Trait: frame_system::Trait  {
+pub trait Trait: frame_system::Trait + pallet_credit::Trait  {
 	/// Because this pallet emits events, it depends on the runtime's definition of an event.
 	type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
 	type Currency: Currency<Self::AccountId>;
 }
 
 pub type EraIndex = u32;
+pub type SessionIndex = u32;
 
 #[derive( Default, Clone, Encode, Decode)]
 pub struct CreditScoreLedger<AccountId>
@@ -39,14 +41,16 @@ decl_storage! {
 	trait Store for Module<T: Trait> as Delegating  {
 		Something get(fn something): Option<u32>;
 
-		DelegatedScore get(fn delegated): map hasher(blake2_128_concat) T::AccountId  => u64;
+		//DelegatedScore get(fn delegated): map hasher(blake2_128_concat) T::AccountId  => u64;
 
+		// 存质押的credit 及 accountid
 		CreditLedger get(fn credit_ledger): map hasher(blake2_128_concat) T::AccountId
 			=> CreditScoreLedger<T::AccountId>;
 
 		//	TODO should be update when era change
 		pub CurrentEra get(fn current_era): Option<EraIndex>;
 
+		// 存PoS生效的Era, AccountID
 		Delegators get(fn delegators): double_map hasher(blake2_128_concat) EraIndex,
 		 hasher(blake2_128_concat) T::AccountId => CreditScoreLedger<T::AccountId>;
 	}
@@ -92,36 +96,31 @@ decl_module! {
 		///
 		/// TODO score 参数不需要， 实际 信誉分 通过 credit pallet 模块获取
 		#[weight = 10_000]
-		pub fn delegate(origin, score: u64) -> dispatch::DispatchResult {
+		pub fn delegate(origin) -> dispatch::DispatchResult {
 			info!("[FLQ] will delegate score to validator ");
 
 			let controller = ensure_signed(origin)?;
 
-			if DelegatedScore::<T>::contains_key(controller.clone()) {
-
-				Err(Error::<T>::AlreadyDelegated)?
+			if let Some(score) = pallet_credit::Module::<T>::get_user_credit(controller.clone())
+			{
+				let _ledger = CreditScoreLedger{
+					delegated_account: controller.clone(),
+					delegated_score: score,
+					withdraw_era: 0,
+				};
+	
+				CreditLedger::<T>::insert(controller.clone(), _ledger.clone());
+	
+				if CreditLedger::<T>::contains_key(controller.clone()) {
+					info!("[FLQ] insert to ledger success .")
+				}
+	
+				//
+				let current_era = CurrentEra::get().unwrap_or(0);
+				Delegators::<T>::insert(current_era, controller.clone(), _ledger.clone());
+	
+				Self::deposit_event(RawEvent::Delegated(controller, score));
 			}
-
-			DelegatedScore::<T>::insert(controller.clone(), score);
-
-			let _ledger = CreditScoreLedger{
-				delegated_account: controller.clone(),
-				delegated_score: score,
-				withdraw_era: 0,
-			};
-
-			CreditLedger::<T>::insert(controller.clone(), _ledger.clone());
-
-			if CreditLedger::<T>::contains_key(controller.clone()) {
-				info!("[FLQ] insert to ledger success .")
-			}
-
-			//
-			let current_era = CurrentEra::get().unwrap_or(0);
-			Delegators::<T>::insert(current_era, controller.clone(), _ledger.clone());
-
-			Self::deposit_event(RawEvent::Delegated(controller, score));
-
 			Ok(())
 		}
 
@@ -131,10 +130,9 @@ decl_module! {
 
 			let controller = ensure_signed(origin)?;
 
-			let score = DelegatedScore::<T>::get(controller.clone());
-
-			Self::deposit_event(RawEvent::Delegated(controller, score));
-
+			if let Some(score) = pallet_credit::Module::<T>::get_user_credit(controller.clone()){
+				Self::deposit_event(RawEvent::Delegated(controller, score));
+			}
 			Ok(())
 		}
 
@@ -145,7 +143,7 @@ decl_module! {
 			// 合法性检查
 			let controller = ensure_signed(origin)?;
 
-			let score = DelegatedScore::<T>::get(controller.clone());
+			if let Some(score) = pallet_credit::Module::<T>::get_user_credit(controller.clone()){
 
 			if !CreditLedger::<T>::contains_key(controller.clone()) {
 				error!("[FLQ]  credit ledger not found . will return err ");
@@ -166,6 +164,7 @@ decl_module! {
 			// 从 delegators 中删除当前账户的
 
 			Self::deposit_event(RawEvent::UnDelegated(controller, score));
+		}
 			Ok(())
 		}
 
@@ -182,10 +181,10 @@ decl_module! {
 			let controller = ensure_signed(origin)?;
 
 			// 检查该账户是否存在 delegate
-			if !DelegatedScore::<T>::contains_key(controller.clone()) {
-				error!("[FLQ] you have not delegated credit score");
-				Err(Error::<T>::NotDelegate)?
-			}
+			//if !DelegatedScore::<T>::contains_key(controller.clone()) {
+			//	error!("[FLQ] you have not delegated credit score");
+			//	Err(Error::<T>::NotDelegate)?
+			//}
 
 			// 检查该账户是否存在 待赎回的 credit score
 			if !CreditLedger::<T>::contains_key(controller.clone()) {
@@ -202,7 +201,7 @@ decl_module! {
 			}
 
 			// 删除该账户对应的 Delegated
-			DelegatedScore::<T>::remove(controller.clone());
+			//DelegatedScore::<T>::remove(controller.clone());
 
 			// 删除该账户对应的 CreditLedger
 			CreditLedger::<T>::remove(controller.clone());
@@ -243,5 +242,37 @@ decl_module! {
 		//
 		// 	Ok(())
 		// }
+	}
+}
+
+// 为本Module实现SessionManger trait
+impl<T: Trait> pallet_session::SessionManager<T::AccountId> for Module<T> {
+	fn new_session(new_index: SessionIndex) -> Option<Vec<T::AccountId>> {
+		Self::new_session(new_index)
+	}
+	fn start_session(start_index: SessionIndex) {
+		Self::start_session(start_index)
+	}
+	fn end_session(end_index: SessionIndex) {
+		Self::end_session(end_index)
+	}
+}
+
+//定义公共和私有函数
+impl<T: Trait> Module<T> {
+	fn new_session(new_index: SessionIndex) -> Option<Vec<T::AccountId>>{
+		let current_era = CurrentEra::mutate(|s| {
+			*s = Some(s.map(|s| s + 1).unwrap_or(0));
+			s.unwrap()
+		});
+		CurrentEra::put(&current_era);
+		let validators: Vec<T::AccountId> = Vec::new();
+		Some(validators)
+	}
+	fn start_session(start_index: SessionIndex){
+
+	}
+	fn end_session(end_index: SessionIndex){
+
 	}
 }
