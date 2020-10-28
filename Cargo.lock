@@ -1206,7 +1206,8 @@ dependencies = [
  "pallet-randomness-collective-flip",
  "pallet-session",
  "pallet-staking",
- "pallet-staking-reward-curve",
+ "pallet-staking-reward-curve 2.0.0-rc6 (git+https://github.com/paritytech/substrate.git?tag=v2.0.0-rc6)",
+ "pallet-staking_with_credit",
  "pallet-sudo",
  "pallet-template",
  "pallet-timestamp",
@@ -3825,6 +3826,47 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "pallet-staking-reward-curve"
+version = "2.0.0-rc6"
+dependencies = [
+ "proc-macro-crate",
+ "proc-macro2",
+ "quote",
+ "sp-runtime",
+ "syn",
+]
+
+[[package]]
+name = "pallet-staking_with_credit"
+version = "2.0.0-rc6"
+dependencies = [
+ "env_logger",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "hex",
+ "pallet-authorship",
+ "pallet-balances",
+ "pallet-session",
+ "pallet-staking-reward-curve 2.0.0-rc6",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "parking_lot 0.10.2",
+ "rand_chacha 0.2.2",
+ "serde",
+ "sp-application-crypto",
+ "sp-core",
+ "sp-io",
+ "sp-npos-elections",
+ "sp-runtime",
+ "sp-staking",
+ "sp-std",
+ "sp-storage",
+ "static_assertions",
+ "substrate-test-utils",
 ]
 
 [[package]]
@@ -6918,6 +6960,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "substrate-test-utils"
+version = "2.0.0-rc6"
+source = "git+https://github.com/paritytech/substrate.git?tag=v2.0.0-rc6#be8bb186d87b9d2b47a2907c9b51ae1e252362c3"
+dependencies = [
+ "futures 0.3.5",
+ "substrate-test-utils-derive",
+ "tokio 0.2.22",
+]
+
+[[package]]
+name = "substrate-test-utils-derive"
+version = "0.8.0-rc6"
+source = "git+https://github.com/paritytech/substrate.git?tag=v2.0.0-rc6#be8bb186d87b9d2b47a2907c9b51ae1e252362c3"
+dependencies = [
+ "proc-macro-crate",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "substrate-wasm-builder-runner"
 version = "1.0.6"
 source = "git+https://github.com/paritytech/substrate.git?tag=v2.0.0-rc6#be8bb186d87b9d2b47a2907c9b51ae1e252362c3"
@@ -7124,6 +7186,7 @@ dependencies = [
  "pin-project-lite",
  "signal-hook-registry",
  "slab",
+ "tokio-macros",
  "winapi 0.3.9",
 ]
 
@@ -7200,6 +7263,17 @@ dependencies = [
  "bytes 0.4.12",
  "futures 0.1.29",
  "log",
+]
+
+[[package]]
+name = "tokio-macros"
+version = "0.2.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f0c3acc6aa564495a0f2e1d59fab677cd7f81a19994cfc7f3ad0e64301560389"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]

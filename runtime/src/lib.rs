@@ -21,7 +21,7 @@ use sp_runtime::transaction_validity::{
 };
 
 use pallet_session::historical as pallet_session_historical;
-pub use pallet_staking::StakerStatus;
+pub use pallet_staking_with_credit::StakerStatus;
 use sp_runtime::{
     create_runtime_str, generic, impl_opaque_keys, ApplyExtrinsicResult, MultiSignature,
 };
@@ -376,7 +376,7 @@ impl delegating::Trait for Runtime {
 impl pallet_session::Trait for Runtime {
     type Event = Event;
     type ValidatorId = <Self as frame_system::Trait>::AccountId;
-    type ValidatorIdOf = pallet_staking::StashOf<Self>;
+    type ValidatorIdOf = pallet_staking_with_credit::StashOf<Self>;
     type ShouldEndSession = Babe;
     type NextSessionRotation = Babe;
     type SessionManager = pallet_session::historical::NoteHistoricalRoot<Self, Staking>;
@@ -387,8 +387,8 @@ impl pallet_session::Trait for Runtime {
 }
 
 impl pallet_session::historical::Trait for Runtime {
-    type FullIdentification = pallet_staking::Exposure<AccountId, Balance>;
-    type FullIdentificationOf = pallet_staking::ExposureOf<Runtime>;
+    type FullIdentification = pallet_staking_with_credit::Exposure<AccountId, Balance>;
+    type FullIdentificationOf = pallet_staking_with_credit::ExposureOf<Runtime>;
 }
 
 pallet_staking_reward_curve::build! {
@@ -413,8 +413,8 @@ where
 
 parameter_types! {
     pub const SessionsPerEra: sp_staking::SessionIndex = 6;
-    pub const BondingDuration: pallet_staking::EraIndex = 24 * 28;
-    pub const SlashDeferDuration: pallet_staking::EraIndex = 24 * 7; // 1/4 the bonding duration.
+    pub const BondingDuration: pallet_staking_with_credit::EraIndex = 24 * 28;
+    pub const SlashDeferDuration: pallet_staking_with_credit::EraIndex = 24 * 7; // 1/4 the bonding duration.
     pub const RewardCurve: &'static PiecewiseLinear<'static> = &REWARD_CURVE;
     pub const MaxNominatorRewardedPerValidator: u32 = 64;
     pub const ElectionLookahead: BlockNumber = EPOCH_DURATION_IN_BLOCKS / 4;
@@ -423,7 +423,7 @@ parameter_types! {
     pub MinSolutionScoreBump: Perbill = Perbill::from_rational_approximation(5u32, 10_000);
 }
 
-impl pallet_staking::Trait for Runtime {
+impl pallet_staking_with_credit::Trait for Runtime {
     type Currency = Balances;
     type UnixTime = Timestamp;
     type CurrencyToVote = CurrencyToVoteHandler;
@@ -472,7 +472,7 @@ construct_runtime!(
 
         // important pallets from node
         Babe: pallet_babe::{Module, Call, Storage, Config, Inherent, ValidateUnsigned},
-        Staking: pallet_staking::{Module, Call, Config<T>, Storage, Event<T>, ValidateUnsigned},
+        Staking: pallet_staking_with_credit::{Module, Call, Config<T>, Storage, Event<T>, ValidateUnsigned},
         Session: pallet_session::{Module, Call, Storage, Event, Config<T>},
         Historical: pallet_session_historical::{Module},
 

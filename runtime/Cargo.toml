@@ -231,6 +231,11 @@ package = 'pallet-delegating'
 path = '../pallets/delegating'
 version = '2.0.0-rc6'
 
+[dependencies.pallet-staking_with_credit]
+default-features = false
+path = '../pallets/staking_with_credit'
+version = '2.0.0-rc6'
+
 [features]
 default = ['std']
 std = [
