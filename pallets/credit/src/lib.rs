@@ -3,11 +3,8 @@
 /// Edit this file to define custom logic or remove it if it is not needed.
 /// Learn more about FRAME and the core library of Substrate FRAME pallets:
 /// https://substrate.dev/docs/en/knowledgebase/runtime/frame
-use frame_support::{
-    decl_error, decl_event, decl_module, decl_storage, dispatch, ensure
-};
+use frame_support::{decl_error, decl_event, decl_module, decl_storage, dispatch, ensure};
 use frame_system::ensure_signed;
-
 
 #[cfg(test)]
 mod mock;
@@ -29,7 +26,7 @@ decl_storage! {
     // ---------------------------------vvvvvvvvvvvvvv
     trait Store for Module<T: Trait> as Credit {
         //store credit score using map
-		pub UserCredit get(fn get_user_credit): map hasher(blake2_128_concat) T::AccountId => Option<u64>;
+        pub UserCredit get(fn get_user_credit): map hasher(blake2_128_concat) T::AccountId => Option<u64>;
     }
 }
 
@@ -42,8 +39,8 @@ decl_event!(
     {
         /// Event documentation should end with an array that provides descriptive names for event
         /// parameters. [something, who]
-		MaxCredit(AccountId, u64),
-		PassThreshold(AccountId, bool),
+        MaxCredit(AccountId, u64),
+        PassThreshold(AccountId, bool),
     }
 );
 
@@ -96,8 +93,8 @@ decl_module! {
         // max credit
         #[weight = 10_000]
         pub fn max_credit(origin) -> dispatch::DispatchResult {
-			let sender = ensure_signed(origin)?;
-			Self::deposit_event(RawEvent::MaxCredit(sender, 100));
+            let sender = ensure_signed(origin)?;
+            Self::deposit_event(RawEvent::MaxCredit(sender, 100));
             Ok(())
         }
 
@@ -106,13 +103,13 @@ decl_module! {
         pub fn pass_threshold(origin, ttype: u8) -> dispatch::DispatchResult{
             let sender = ensure_signed(origin)?;
             if let Some(score)= UserCredit::<T>::get(sender.clone()){
-				let mut is_passed = false;
-				if score > ttype as u64{
-					is_passed = true;
-				}
-				Self::deposit_event(RawEvent::PassThreshold(sender, is_passed));
-			};
-			Ok(())
+                let mut is_passed = false;
+                if score > ttype as u64{
+                    is_passed = true;
+                }
+                Self::deposit_event(RawEvent::PassThreshold(sender, is_passed));
+            };
+            Ok(())
         }
 
         // clear credit score
