@@ -264,7 +264,7 @@ impl<T: Trait> CreditDelegateInterface<T::AccountId> for Module<T> {
 
     fn total_delegated_score() -> Option<u64> {
         let mut total_score: u64 = 0;
-        if let Some(candidate_validators) = <CurrentEraValidators<T>>::get(){
+        if let Some(candidate_validators) = <CandidateValidators<T>>::get(){
             for candidate_validator in candidate_validators{
                 total_score = total_score.saturating_add(
                     Self::delegated_score_of_validator(&candidate_validator).unwrap_or(0),
