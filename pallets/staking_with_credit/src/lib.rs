@@ -3348,6 +3348,11 @@ impl<T: Trait> historical::SessionManager<T::AccountId, Exposure<T::AccountId, B
     fn new_session(
         new_index: SessionIndex,
     ) -> Option<Vec<(T::AccountId, Exposure<T::AccountId, BalanceOf<T>>)>> {
+
+        //update cadidate validators for PoC
+        let candidate_validators = <Validators<T>>::iter().map(|(v, _)| v).collect::<Vec<_>>();
+        T::CreditDelegate::set_candidate_validators(candidate_validators);
+
         <Self as pallet_session::SessionManager<_>>::new_session(new_index).map(|validators| {
             let current_era = Self::current_era()
                 // Must be some as a new era has been created.
