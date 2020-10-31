@@ -302,6 +302,9 @@ use frame_system::{
     self as system, ensure_none, ensure_root, ensure_signed, offchain::SendTransactionTypes,
 };
 use pallet_session::historical;
+
+use pallet_delegating::CreditDelegateInterface;
+
 use sp_npos_elections::{
     build_support_map, evaluate_support, generate_solution_type, is_score_better, seq_phragmen,
     Assignment, ElectionResult as PrimitiveElectionResult, ElectionScore, ExtendedBalance,
@@ -958,6 +961,9 @@ impl WeightInfo for () {
 pub trait Trait: frame_system::Trait + SendTransactionTypes<Call<Self>> {
     /// The staking balance.
     type Currency: LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>;
+
+    ///
+    type CreditDelegate: CreditDelegateInterface<Self::AccountId>;
 
     /// Time used for computing era duration.
     ///
@@ -2374,6 +2380,22 @@ impl<T: Trait> Module<T> {
         )
     }
 
+    /// internal impl of delegated_credit_score
+    fn delegated_credit_score_of_vote_weight(validator: &T::AccountId) -> VoteWeight {
+        let score = T::CreditDelegate::delegated_score_of_validator(validator).unwrap_or(0);
+        let total_score = T::CreditDelegate::total_delegated_score().unwrap_or(0);
+        let factor = (total_score / u64::max_value()).max(1);
+        let vote_weight = (score / factor) as u64;
+        log!(
+			info,
+            "💸 PoC (validator {:?}  with: PoC vote weight {} and score {}).",
+            validator,
+			vote_weight/2,
+			score,
+		);
+        vote_weight
+    }
+
     /// Dump the list of validators and nominators into vectors and keep them on-chain.
     ///
     /// This data is used to efficiently evaluate election results. returns `true` if the operation
@@ -2943,6 +2965,15 @@ impl<T: Trait> Module<T> {
         // Set staking information for new era.
         let maybe_new_validators = Self::select_and_update_validators(current_era);
 
+        // add for poc delegating pallet
+        let candidate_validators = <Validators<T>>::iter().map(|(v, _)| v).collect::<Vec<_>>();
+        T::CreditDelegate::set_candidate_validators(candidate_validators);
+
+        T::CreditDelegate::set_current_era(current_era);
+        T::CreditDelegate::set_current_era_validators(
+            maybe_new_validators.clone().unwrap_or_default()
+        );
+
         maybe_new_validators
     }
 
@@ -3107,7 +3138,8 @@ impl<T: Trait> Module<T> {
             // append self vote
             let self_vote = (
                 validator.clone(),
-                Self::slashable_balance_of_vote_weight(&validator),
+                Self::slashable_balance_of_vote_weight(&validator)>>1
+                    + Self::delegated_credit_score_of_vote_weight(&validator)>>1,
                 vec![validator.clone()],
             );
             all_nominators.push(self_vote);
@@ -3131,7 +3163,8 @@ impl<T: Trait> Module<T> {
             (nominator, targets)
         });
         all_nominators.extend(nominator_votes.map(|(n, ns)| {
-            let s = Self::slashable_balance_of_vote_weight(&n);
+            let s = Self::slashable_balance_of_vote_weight(&n)>>1
+                + Self::delegated_credit_score_of_vote_weight(&n)>>1;
             (n, s, ns)
         }));
 

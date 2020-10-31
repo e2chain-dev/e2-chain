@@ -425,6 +425,7 @@ parameter_types! {
 
 impl pallet_staking_with_credit::Trait for Runtime {
     type Currency = Balances;
+    type CreditDelegate = Delegating;
     type UnixTime = Timestamp;
     type CurrencyToVote = CurrencyToVoteHandler;
     type RewardRemainder = (); // TODO: add treasury

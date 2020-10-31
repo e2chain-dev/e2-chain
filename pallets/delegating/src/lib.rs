@@ -53,9 +53,10 @@ decl_storage! {
 
         //	TODO should be update when era change
         pub CurrentEra get(fn current_era): Option<EraIndex>;
+        pub CurrentEraValidators get(fn current_era_validators): Option<Vec<T::AccountId>>;
 
         //  candidate validator list
-        pub CandidateValidators get(fn candidate_validators): Vec<T::AccountId>;
+        pub CandidateValidators get(fn candidate_validators): Option<Vec<T::AccountId>>;
 
     }
 }
@@ -106,8 +107,9 @@ decl_module! {
         pub fn delegate(origin, validator: T::AccountId) -> dispatch::DispatchResult {
             let controller = ensure_signed(origin)?;
 
-            let candidate_validators = CandidateValidators::<T>::get();
-            ensure!(candidate_validators.contains(&validator), "Validator AccountId  isn't in candidateValidators");
+            if let Some(candidate_validators) = CandidateValidators::<T>::get(){
+                ensure!(candidate_validators.contains(&validator), "Validator AccountId  isn't in candidateValidators");
+            }
 
             if let Some(score) = pallet_credit::Module::<T>::get_user_credit(controller.clone())
             {
@@ -221,18 +223,37 @@ decl_module! {
         // }
     }
 }
+
+pub trait CreditDelegateInterface<AccountId> {
+    fn set_current_era(current_era: EraIndex);
+    fn set_current_era_validators(validators: Vec<AccountId>);
+    fn set_candidate_validators(candidate_validators: Vec<AccountId>);
+
+    /// 获取当前ERA accountid代理的总分
+    fn delegated_score_of_validator(validator: &AccountId) -> Option<u64>;
+
+    /// 获取当前ERA代理的总分
+    fn total_delegated_score() -> Option<u64>;
+
+    fn get_delegated_score(account_id: AccountId) -> Option<u64>;
+}
 //定义公共和私有函数
-impl<T: Trait> Module<T> {
-    pub fn set_current_era(current_era: EraIndex) {
+
+impl<T: Trait> CreditDelegateInterface<T::AccountId> for Module<T> {
+    fn set_current_era(current_era: EraIndex) {
         <CurrentEra>::put(current_era);
     }
-    pub fn set_candidate_validators(validators: Vec<T::AccountId>) {
-        <CandidateValidators<T>>::put(validators);
+
+    fn set_current_era_validators(validators: Vec<T::AccountId>) {
+        <CurrentEraValidators<T>>::put(validators);
     }
-    pub fn delegated_score_of_validaor(
-        era_index: EraIndex,
-        validator: T::AccountId,
-    ) -> Option<u64> {
+
+    fn set_candidate_validators(candidate_validators: Vec<T::AccountId>) {
+        <CandidateValidators<T>>::put(candidate_validators);
+    }
+
+    fn delegated_score_of_validator(validator: &T::AccountId) -> Option<u64> {
+        let era_index = <CurrentEra>::get().unwrap_or(0);
         let delegators = <Delegators<T>>::get(era_index, validator);
         let mut score: u64 = 0;
         for delegator in delegators {
@@ -240,11 +261,15 @@ impl<T: Trait> Module<T> {
         }
         Some(score)
     }
-    pub fn total_delegated_score(era_index: EraIndex) -> Option<u64> {
-        let candidate_validators = <CandidateValidators<T>>::get();
+
+    fn total_delegated_score() -> Option<u64> {
         let mut total_score: u64 = 0;
-        for candidate_validator in candidate_validators {
-            total_score += Self::delegated_score_of_validaor(era_index, candidate_validator).unwrap_or(0);
+        if let Some(candidate_validators) = <CurrentEraValidators<T>>::get(){
+            for candidate_validator in candidate_validators{
+                total_score = total_score.saturating_add(
+                    Self::delegated_score_of_validator(&candidate_validator).unwrap_or(0),
+                );
+            }
         }
         Some(total_score)
     }
