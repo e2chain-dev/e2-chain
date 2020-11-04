@@ -191,13 +191,13 @@ decl_module! {
         }
 
         ///	用户重新委托信誉分（针对： 已经发起 undelegate，信誉分还处于锁定状态的情况）
-        ///
-        ///
-        /// TODO 待实现
         #[weight = 10_000]
         pub fn redelegate(origin) -> dispatch::DispatchResult {
             info!("[FLQ] redelegate credit score ");
+            let controller = ensure_signed(origin)?;
+            ensure!(CreditLedger::<T>::contains_key(controller.clone()), Error::<T>::NotDelegate);
 
+            CreditLedger::<T>::mutate(controller.clone(),|ledger| (*ledger).withdraw_era = 0);
 
             Ok(())
         }
