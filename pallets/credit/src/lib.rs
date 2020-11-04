@@ -12,6 +12,17 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+
+/// mircropayment number to credit factor: / 
+pub const MICROPAYMENT_TO_CREDIT_SCORE_FACTOR: u32 = 1000;
+/// Credit score threshold
+pub const CREDIT_SCORE_THRESHOLD: u32 = 100;
+
+// Credit score delegated threshold 
+pub const CREDIT_SCORE_DELEGATED_PERMIT_THRESHOLD: u32 = 60;
+/// per credit score vote weight
+pub const TOKEN_PER_CREDIT_SCORE: u32 = 10_000_000;
+
 /// Configure the pallet by specifying the parameters and types on which it depends.
 pub trait Trait: frame_system::Trait {
     /// Because this pallet emits events, it depends on the runtime's definition of an event.

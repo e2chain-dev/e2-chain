@@ -2968,7 +2968,7 @@ impl<T: Trait> Module<T> {
         // add for poc delegating pallet
         let candidate_validators = <Validators<T>>::iter().map(|(v, _)| v).collect::<Vec<_>>();
         T::CreditDelegate::set_candidate_validators(candidate_validators);
-
+        
         T::CreditDelegate::set_current_era(current_era);
         T::CreditDelegate::set_current_era_validators(
             maybe_new_validators.clone().unwrap_or_default()
@@ -3138,8 +3138,8 @@ impl<T: Trait> Module<T> {
             // append self vote
             let self_vote = (
                 validator.clone(),
-                Self::slashable_balance_of_vote_weight(&validator)>>1
-                    + Self::delegated_credit_score_of_vote_weight(&validator)>>1,
+                Self::slashable_balance_of_vote_weight(&validator)/2
+                    + Self::delegated_credit_score_of_vote_weight(&validator)/2,
                 vec![validator.clone()],
             );
             all_nominators.push(self_vote);
@@ -3163,8 +3163,8 @@ impl<T: Trait> Module<T> {
             (nominator, targets)
         });
         all_nominators.extend(nominator_votes.map(|(n, ns)| {
-            let s = Self::slashable_balance_of_vote_weight(&n)>>1
-                + Self::delegated_credit_score_of_vote_weight(&n)>>1;
+            let s = Self::slashable_balance_of_vote_weight(&n)/2
+                + Self::delegated_credit_score_of_vote_weight(&n)/2;
             (n, s, ns)
         }));
 

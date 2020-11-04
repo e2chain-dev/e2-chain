@@ -210,17 +210,6 @@ decl_module! {
 
             Ok(())
         }
-
-
-        // #[weight = 10_000]
-        // pub fn vote_validators(origin, validators: Vec<T::AccountId>)  -> dispatch::DispatchResult {
-        // 	info!("[FLQ] vote validator ");
-        // 	// 选择将信誉分 委托给哪些 validator
-        // 	// TODO 待实现
-        //
-        //
-        // 	Ok(())
-        // }
     }
 }
 
@@ -240,8 +229,23 @@ pub trait CreditDelegateInterface<AccountId> {
 //定义公共和私有函数
 
 impl<T: Trait> CreditDelegateInterface<T::AccountId> for Module<T> {
+    /// 每个era开始调用一次
     fn set_current_era(current_era: EraIndex) {
         <CurrentEra>::put(current_era);
+
+        if current_era > 0 { // 更新潜在validator背后质押credit的账户、及era_index
+            if let Some(candidate_validators) = <CandidateValidators<T>>::get(){
+                for candidate_validator in candidate_validators{
+                    let delegators = <Delegators<T>>::get( current_era-1, candidate_validator.clone());
+                    let next_delegators: Vec<_> = delegators.iter().filter(|delegator|{
+                        let ledger = <CreditLedger<T>>::get(delegator);
+                        ledger.withdraw_era == 0 // ==0 正常质押credit
+                    }).collect();
+
+                   <Delegators<T>>::insert(current_era, candidate_validator, next_delegators);
+                }
+            }
+        }
     }
 
     fn set_current_era_validators(validators: Vec<T::AccountId>) {
