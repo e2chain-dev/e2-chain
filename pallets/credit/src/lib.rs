@@ -14,14 +14,16 @@ mod tests;
 
 
 /// mircropayment number to credit factor: / 
-pub const MICROPAYMENT_TO_CREDIT_SCORE_FACTOR: u32 = 1000;
+pub const MICROPAYMENT_TO_CREDIT_SCORE_FACTOR: u64 = 1000;
 /// Credit score threshold
-pub const CREDIT_SCORE_THRESHOLD: u32 = 100;
+pub const CREDIT_SCORE_THRESHOLD: u64 = 100;
+/// credit score attenuation low threshold
+pub const CREDIT_SCORE_ATTENUATION_LOW_THRESHOLD: u64 = 50;
 
 // Credit score delegated threshold 
-pub const CREDIT_SCORE_DELEGATED_PERMIT_THRESHOLD: u32 = 60;
+pub const CREDIT_SCORE_DELEGATED_PERMIT_THRESHOLD: u64 = 60;
 /// per credit score vote weight
-pub const TOKEN_PER_CREDIT_SCORE: u32 = 10_000_000;
+pub const TOKEN_PER_CREDIT_SCORE: u64 = 10_000_000;
 
 /// Configure the pallet by specifying the parameters and types on which it depends.
 pub trait Trait: frame_system::Trait {
@@ -62,6 +64,7 @@ decl_error! {
         NoneValue,
         /// Errors should have helpful documentation associated with them.
         StorageOverflow,
+        AlreadyInitilized,
     }
 }
 
@@ -131,5 +134,62 @@ decl_module! {
             UserCredit::<T>::remove(sender);
             Ok(())
         }
+    }
+}
+
+pub trait CreditInterface<AccountId> {
+    fn initilize_credit(account_id: AccountId, score: u64) -> bool;
+    fn update_credit(account_id: AccountId, score: u64) -> bool;
+    fn pass_threshold(account_id: AccountId, ttype: u8) -> bool;
+    fn credit_attenuation(account_id: AccountId) -> bool;
+    fn kill_credit(account_id: AccountId)-> bool;
+}
+
+impl<T: Trait> CreditInterface<T::AccountId> for Module<T> {
+    fn initilize_credit(account_id: T::AccountId, score: u64) -> bool{
+        if UserCredit::<T>::contains_key(account_id.clone()){
+          false
+        }else{
+            UserCredit::<T>::insert(account_id, score);
+            true
+        }
+    }
+    fn update_credit(account_id: T::AccountId, score: u64) -> bool{
+        if UserCredit::<T>::contains_key(account_id.clone()){
+            UserCredit::<T>::insert(account_id, score);
+            true
+          }else{
+              false
+          }
+    }
+    fn pass_threshold(account_id: T::AccountId, ttype: u8)->bool{
+        if UserCredit::<T>::contains_key(account_id.clone()){
+            if let Some(score)= UserCredit::<T>::get(account_id){
+                let mut is_passed = false;
+                if score > ttype as u64{
+                    is_passed = true;
+                }
+                return is_passed;
+            }
+        }
+        false
+    }
+    fn credit_attenuation(account_id: T::AccountId) -> bool{
+        if UserCredit::<T>::contains_key(account_id.clone()){
+            if let Some(score) = UserCredit::<T>::get(account_id.clone()){
+                if score > CREDIT_SCORE_ATTENUATION_LOW_THRESHOLD {
+                    UserCredit::<T>::insert(account_id, score-1);
+                    return true
+                } 
+            }
+        }
+        false
+    }
+    fn kill_credit(account_id: T::AccountId) -> bool{
+        if UserCredit::<T>::contains_key(account_id.clone()){
+            UserCredit::<T>::remove(account_id);
+            return true
+        }
+        false
     }
 }
