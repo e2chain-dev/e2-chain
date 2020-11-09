@@ -225,6 +225,9 @@ pub trait CreditDelegateInterface<AccountId> {
     fn total_delegated_score() -> Option<u64>;
 
     fn get_delegated_score(account_id: AccountId) -> Option<u64>;
+
+    /// kill delegator's credit score
+    fn kill_credit(account_id: AccountId) -> bool;
 }
 //定义公共和私有函数
 
@@ -233,16 +236,27 @@ impl<T: Trait> CreditDelegateInterface<T::AccountId> for Module<T> {
     fn set_current_era(current_era: EraIndex) {
         <CurrentEra>::put(current_era);
 
-        if current_era > 0 { // 更新潜在validator背后质押credit的账户、及era_index
-            if let Some(candidate_validators) = <CandidateValidators<T>>::get(){
-                for candidate_validator in candidate_validators{
-                    let delegators = <Delegators<T>>::get( current_era-1, candidate_validator.clone());
-                    let next_delegators: Vec<_> = delegators.iter().filter(|delegator|{
-                        let ledger = <CreditLedger<T>>::get(delegator);
-                        ledger.withdraw_era == 0 // ==0 正常质押credit
-                    }).collect();
-
-                   <Delegators<T>>::insert(current_era, candidate_validator, next_delegators);
+        if current_era > 0 {
+            // 更新潜在validator背后质押credit的账户、及era_index
+            if let Some(candidate_validators) = <CandidateValidators<T>>::get() {
+                for candidate_validator in candidate_validators {
+                    let delegators =
+                        <Delegators<T>>::get(current_era - 1, candidate_validator.clone());
+                    let next_delegators: Vec<_> = delegators
+                        .iter()
+                        .filter(|delegator| {
+                            let ledger = <CreditLedger<T>>::get(delegator);
+                            ledger.withdraw_era == 0 // ==0 正常质押credit
+                        })
+                        .collect();
+                    <Delegators<T>>::insert(current_era, candidate_validator, next_delegators.clone());
+                    
+                    // update credit score of next delegators
+                    for delegator in next_delegators{
+                        if let Some(score) = pallet_credit::Module::<T>::get_user_credit(delegator.clone()){
+                            <CreditLedger<T>>::mutate(delegator.clone(), |ledger| (*ledger).delegated_score = score);
+                        }
+                    }
                 }
             }
         }
@@ -268,8 +282,8 @@ impl<T: Trait> CreditDelegateInterface<T::AccountId> for Module<T> {
 
     fn total_delegated_score() -> Option<u64> {
         let mut total_score: u64 = 0;
-        if let Some(candidate_validators) = <CandidateValidators<T>>::get(){
-            for candidate_validator in candidate_validators{
+        if let Some(candidate_validators) = <CandidateValidators<T>>::get() {
+            for candidate_validator in candidate_validators {
                 total_score = total_score.saturating_add(
                     Self::delegated_score_of_validator(&candidate_validator).unwrap_or(0),
                 );
@@ -281,11 +295,38 @@ impl<T: Trait> CreditDelegateInterface<T::AccountId> for Module<T> {
     // 获取账号 account id 质押的 score
     fn get_delegated_score(account_id: T::AccountId) -> Option<u64> {
         if CreditLedger::<T>::contains_key(account_id.clone()) {
-            let leger = CreditLedger::<T>::get(account_id);
-            let score = leger.delegated_score;
+            let ledger = CreditLedger::<T>::get(account_id);
+            let score = ledger.delegated_score;
             Some(score)
         } else {
             Some(0)
         }
+    }
+
+    fn kill_credit(account_id: T::AccountId) -> bool{
+        if CreditLedger::<T>::contains_key(account_id.clone()){
+            let ledger = <CreditLedger<T>>::get(account_id.clone());
+            let validator = ledger.validator_account;
+            
+            let current_era = Self::current_era().unwrap_or(0);
+            let mut start_index = 0;
+            if current_era > 84{
+                start_index = current_era - 84;
+            }
+
+            for era in start_index..current_era+1{
+                if <Delegators<T>>::contains_key(era, validator.clone()){
+                    let delegators = <Delegators<T>>::take(era, validator.clone());
+                    let next_delegators:Vec<_> = delegators
+                        .iter()
+                        .filter(|delegator|{
+                            *delegator != &account_id
+                        })
+                        .collect();
+                    <Delegators<T>>::insert(era, validator.clone(), next_delegators)
+                }
+            }
+        }
+        false
     }
 }

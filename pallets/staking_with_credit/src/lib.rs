@@ -2387,12 +2387,12 @@ impl<T: Trait> Module<T> {
         let factor = (total_score / u64::max_value()).max(1);
         let vote_weight = (score / factor) as u64;
         log!(
-			info,
+            info,
             "💸 PoC (validator {:?}  with: PoC vote weight {} and score {}).",
             validator,
-			vote_weight/2,
-			score,
-		);
+            vote_weight / 2,
+            score,
+        );
         vote_weight
     }
 
@@ -2968,10 +2968,10 @@ impl<T: Trait> Module<T> {
         // add for poc delegating pallet
         let candidate_validators = <Validators<T>>::iter().map(|(v, _)| v).collect::<Vec<_>>();
         T::CreditDelegate::set_candidate_validators(candidate_validators);
-        
+
         T::CreditDelegate::set_current_era(current_era);
         T::CreditDelegate::set_current_era_validators(
-            maybe_new_validators.clone().unwrap_or_default()
+            maybe_new_validators.clone().unwrap_or_default(),
         );
 
         maybe_new_validators
@@ -3138,8 +3138,8 @@ impl<T: Trait> Module<T> {
             // append self vote
             let self_vote = (
                 validator.clone(),
-                Self::slashable_balance_of_vote_weight(&validator)/2
-                    + Self::delegated_credit_score_of_vote_weight(&validator)/2,
+                Self::slashable_balance_of_vote_weight(&validator) / 2
+                    + Self::delegated_credit_score_of_vote_weight(&validator) / 2,
                 vec![validator.clone()],
             );
             all_nominators.push(self_vote);
@@ -3163,8 +3163,8 @@ impl<T: Trait> Module<T> {
             (nominator, targets)
         });
         all_nominators.extend(nominator_votes.map(|(n, ns)| {
-            let s = Self::slashable_balance_of_vote_weight(&n)/2
-                + Self::delegated_credit_score_of_vote_weight(&n)/2;
+            let s = Self::slashable_balance_of_vote_weight(&n) / 2
+                + Self::delegated_credit_score_of_vote_weight(&n) / 2;
             (n, s, ns)
         }));
 
@@ -3348,7 +3348,6 @@ impl<T: Trait> historical::SessionManager<T::AccountId, Exposure<T::AccountId, B
     fn new_session(
         new_index: SessionIndex,
     ) -> Option<Vec<(T::AccountId, Exposure<T::AccountId, BalanceOf<T>>)>> {
-
         //update cadidate validators for PoC
         let candidate_validators = <Validators<T>>::iter().map(|(v, _)| v).collect::<Vec<_>>();
         T::CreditDelegate::set_candidate_validators(candidate_validators);

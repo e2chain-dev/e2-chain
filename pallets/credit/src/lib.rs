@@ -12,15 +12,16 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-
-/// mircropayment number to credit factor: / 
+/// mircropayment number to credit factor: /
 pub const MICROPAYMENT_TO_CREDIT_SCORE_FACTOR: u64 = 1000;
 /// Credit score threshold
 pub const CREDIT_SCORE_THRESHOLD: u64 = 100;
+/// Credit init score
+pub const CREDIT_INIT_SCORE: u64 = 30;
 /// credit score attenuation low threshold
 pub const CREDIT_SCORE_ATTENUATION_LOW_THRESHOLD: u64 = 50;
 
-// Credit score delegated threshold 
+// Credit score delegated threshold
 pub const CREDIT_SCORE_DELEGATED_PERMIT_THRESHOLD: u64 = 60;
 /// per credit score vote weight
 pub const TOKEN_PER_CREDIT_SCORE: u64 = 10_000_000;
@@ -52,8 +53,8 @@ decl_event!(
     {
         /// Event documentation should end with an array that provides descriptive names for event
         /// parameters. [something, who]
-        MaxCredit(AccountId, u64),
-        PassThreshold(AccountId, bool),
+        CreditInitSuccess(AccountId, u64),
+        KillCreditSuccess(AccountId),
     }
 );
 
@@ -88,41 +89,12 @@ decl_module! {
 
         // init credit score
         #[weight = 10_000]
-        pub fn initilize_credit(origin, credit: u64) -> dispatch::DispatchResult{
+        pub fn initilize_credit(origin) -> dispatch::DispatchResult{
             let sender = ensure_signed(origin)?;
             ensure!(!UserCredit::<T>::contains_key(sender.clone()), "Credit Score of AccountId  already Initilized");
-            UserCredit::<T>::insert(sender.clone(), credit);
-            Ok(())
-        }
+            UserCredit::<T>::insert(sender.clone(), CREDIT_INIT_SCORE);
+            Self::deposit_event(RawEvent::CreditInitSuccess(sender, CREDIT_INIT_SCORE));
 
-        // update credit score
-        #[weight = 10_000]
-        pub fn update_credit(origin, credit: u64) -> dispatch::DispatchResult {
-            let sender = ensure_signed(origin)?;
-            ensure!(UserCredit::<T>::contains_key(sender.clone()), "AccountId is uninitilized");
-            UserCredit::<T>::insert(sender.clone(), credit);
-            Ok(())
-        }
-
-        // max credit
-        #[weight = 10_000]
-        pub fn max_credit(origin) -> dispatch::DispatchResult {
-            let sender = ensure_signed(origin)?;
-            Self::deposit_event(RawEvent::MaxCredit(sender, 100));
-            Ok(())
-        }
-
-        // given type of threshold, determine whether a user's credit score has passed it
-        #[weight = 10_000]
-        pub fn pass_threshold(origin, ttype: u8) -> dispatch::DispatchResult{
-            let sender = ensure_signed(origin)?;
-            if let Some(score)= UserCredit::<T>::get(sender.clone()){
-                let mut is_passed = false;
-                if score > ttype as u64{
-                    is_passed = true;
-                }
-                Self::deposit_event(RawEvent::PassThreshold(sender, is_passed));
-            };
             Ok(())
         }
 
@@ -131,7 +103,8 @@ decl_module! {
         pub fn kill_credit(origin) -> dispatch::DispatchResult{
             let sender = ensure_signed(origin)?;
             ensure!(UserCredit::<T>::contains_key(sender.clone()), "AccountId is not existed");
-            UserCredit::<T>::remove(sender);
+            UserCredit::<T>::remove(sender.clone());
+            Self::deposit_event(RawEvent::KillCreditSuccess(sender));
             Ok(())
         }
     }
@@ -141,32 +114,37 @@ pub trait CreditInterface<AccountId> {
     fn initilize_credit(account_id: AccountId, score: u64) -> bool;
     fn update_credit(account_id: AccountId, score: u64) -> bool;
     fn pass_threshold(account_id: AccountId, ttype: u8) -> bool;
-    fn credit_attenuation(account_id: AccountId) -> bool;
-    fn kill_credit(account_id: AccountId)-> bool;
+    fn credit_attenuation(account_id: AccountId, attenuate_score: u64) -> bool;
+    fn kill_credit(account_id: AccountId) -> bool;
 }
 
 impl<T: Trait> CreditInterface<T::AccountId> for Module<T> {
-    fn initilize_credit(account_id: T::AccountId, score: u64) -> bool{
-        if UserCredit::<T>::contains_key(account_id.clone()){
-          false
-        }else{
+    /// init credit score
+    fn initilize_credit(account_id: T::AccountId, score: u64) -> bool {
+        if UserCredit::<T>::contains_key(account_id.clone()) {
+            false
+        } else {
             UserCredit::<T>::insert(account_id, score);
             true
         }
     }
-    fn update_credit(account_id: T::AccountId, score: u64) -> bool{
-        if UserCredit::<T>::contains_key(account_id.clone()){
+
+    /// update credit score
+    fn update_credit(account_id: T::AccountId, score: u64) -> bool {
+        if UserCredit::<T>::contains_key(account_id.clone()) {
             UserCredit::<T>::insert(account_id, score);
             true
-          }else{
-              false
-          }
+        } else {
+            false
+        }
     }
-    fn pass_threshold(account_id: T::AccountId, ttype: u8)->bool{
-        if UserCredit::<T>::contains_key(account_id.clone()){
-            if let Some(score)= UserCredit::<T>::get(account_id){
+
+    /// check if account_id's credit score is pass threshold ttype
+    fn pass_threshold(account_id: T::AccountId, ttype: u8) -> bool {
+        if UserCredit::<T>::contains_key(account_id.clone()) {
+            if let Some(score) = UserCredit::<T>::get(account_id) {
                 let mut is_passed = false;
-                if score > ttype as u64{
+                if score > ttype as u64 {
                     is_passed = true;
                 }
                 return is_passed;
@@ -174,21 +152,38 @@ impl<T: Trait> CreditInterface<T::AccountId> for Module<T> {
         }
         false
     }
-    fn credit_attenuation(account_id: T::AccountId) -> bool{
-        if UserCredit::<T>::contains_key(account_id.clone()){
-            if let Some(score) = UserCredit::<T>::get(account_id.clone()){
-                if score > CREDIT_SCORE_ATTENUATION_LOW_THRESHOLD {
-                    UserCredit::<T>::insert(account_id, score-1);
-                    return true
-                } 
+
+    /// credit score attenuation 
+    /// Return:
+    /// true : success
+    /// false: failed
+    fn credit_attenuation(account_id: T::AccountId, attenuate_score: u64) -> bool {
+        if attenuate_score > 10 {
+            return false;
+        }
+        if !UserCredit::<T>::contains_key(account_id.clone()) {
+            return false;
+        }
+        if let Some(score) = UserCredit::<T>::get(account_id.clone()) {
+            if score <= CREDIT_SCORE_ATTENUATION_LOW_THRESHOLD {
+                return false;
+            }
+            if score - attenuate_score > CREDIT_SCORE_ATTENUATION_LOW_THRESHOLD {
+                UserCredit::<T>::insert(account_id, score - attenuate_score);
+                return true;
+            } else {
+                UserCredit::<T>::insert(account_id, CREDIT_SCORE_ATTENUATION_LOW_THRESHOLD);
+                return true;
             }
         }
         false
     }
-    fn kill_credit(account_id: T::AccountId) -> bool{
-        if UserCredit::<T>::contains_key(account_id.clone()){
+
+    /// clear credit info
+    fn kill_credit(account_id: T::AccountId) -> bool {
+        if UserCredit::<T>::contains_key(account_id.clone()) {
             UserCredit::<T>::remove(account_id);
-            return true
+            return true;
         }
         false
     }
