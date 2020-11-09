@@ -167,9 +167,14 @@ decl_module! {
                     CreditLedger::<T>::insert(controller.clone(), ledger.clone());
     
                     let current_era = CurrentEra::get().unwrap_or(0);
-                    let mut delegators = Delegators::<T>::take(current_era, validator.clone());
-                    delegators.push(controller.clone());
-                    Delegators::<T>::insert(current_era, validator.clone(), delegators);
+                    if Delegators::<T>::contains_key(current_era, validator.clone()){
+                        let mut delegators = Delegators::<T>::take(current_era, validator.clone());
+                        delegators.push(controller.clone());
+                        Delegators::<T>::insert(current_era, validator.clone(), delegators);
+                    }else{
+                        let delegators = vec![controller.clone()];
+                        Delegators::<T>::insert(current_era, validator.clone(), delegators);
+                    }
     
                     Self::deposit_event(RawEvent::Delegated(controller, validator, score));
                 }
