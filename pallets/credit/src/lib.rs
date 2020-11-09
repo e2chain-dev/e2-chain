@@ -151,7 +151,7 @@ impl<T: Trait> CreditInterface<T::AccountId> for Module<T> {
         false
     }
 
-    /// credit score attenuation 
+    /// credit score attenuation
     /// Return:
     /// true : success
     /// false: failed

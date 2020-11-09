@@ -16,12 +16,12 @@ use frame_support::{
     decl_error, decl_event, decl_module, decl_storage, dispatch, ensure, traits::Currency,
 };
 use frame_system::ensure_signed;
-use sp_std::vec::Vec;
-use sp_std::vec;
 use pallet_credit::CreditInterface;
+use sp_std::vec;
+use sp_std::vec::Vec;
 
 /// Configure the pallet by specifying the parameters and types on which it depends.
-pub trait Trait: frame_system::Trait + pallet_credit::Trait{
+pub trait Trait: frame_system::Trait + pallet_credit::Trait {
     /// Because this pallet emits events, it depends on the runtime's definition of an event.
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
     type Currency: Currency<Self::AccountId>;
@@ -52,7 +52,7 @@ decl_storage! {
 
         // 存PoC生效的Era, validator id
         Delegators get(fn delegators): double_map hasher(blake2_128_concat) EraIndex,
-        hasher(blake2_128_concat) T::AccountId => Vec<T::AccountId>;
+        hasher(blake2_128_concat) T::AccountId => Vec<(T::AccountId, u64)>;
 
         //	TODO should be update when era change
         pub CurrentEra get(fn current_era): Option<EraIndex>;
@@ -129,6 +129,7 @@ decl_module! {
                     if _ledger.validator_account != validator.clone(){ // target is diffent
                         CreditLedger::<T>::mutate(controller.clone(), |ledger| {
                             (*ledger).validator_account = validator.clone();
+                            (*ledger).delegated_score = score;
                             (*ledger).withdraw_era = 0;
                         });
                         let current_era = CurrentEra::get().unwrap_or(0);
@@ -139,8 +140,8 @@ decl_module! {
                             let delegators = Delegators::<T>::take(current_era, last_validator.clone());
                             let next_delegators: Vec<_> = delegators
                                 .iter()
-                                .filter(|delegator|{
-                                    *delegator != &controller
+                                .filter(|(delegator, _)|{
+                                    delegator != &controller
                                 })
                                 .collect();
                             Delegators::<T>::insert(current_era, last_validator.clone(), next_delegators);
@@ -149,11 +150,34 @@ decl_module! {
                         // add controller to new validator
                         if Delegators::<T>::contains_key(current_era, validator.clone()){
                             let mut delegators = Delegators::<T>::take(current_era, validator.clone());
-                            delegators.push(controller.clone());
+                            delegators.push((controller.clone(), score));
                             Delegators::<T>::insert(current_era, validator.clone(), delegators);
                         }else{
-                            let delegators = vec![controller.clone()];
+                            let delegators = vec![(controller.clone(),score)];
                             Delegators::<T>::insert(current_era, validator.clone(), delegators);
+                        }
+
+                    }else{ // target is same, update score
+                        CreditLedger::<T>::mutate(controller.clone(), |ledger| {
+                            (*ledger).validator_account = validator.clone();
+                            (*ledger).delegated_score = score;
+                            (*ledger).withdraw_era = 0;
+                        });
+                        let current_era = CurrentEra::get().unwrap_or(0);
+
+                        if Delegators::<T>::contains_key(current_era, validator.clone()){
+                            let delegators = Delegators::<T>::take(current_era, validator.clone());
+                            let next_delegators: Vec<_> = delegators
+                                .iter()
+                                .map(|(delegator, s)|{
+                                    if delegator == &controller{
+                                        (delegator, score)
+                                    }else{
+                                        (delegator, *s)
+                                    }
+                                })
+                                .collect();
+                            Delegators::<T>::insert(current_era, validator.clone(), next_delegators);
                         }
 
                     }
@@ -165,17 +189,17 @@ decl_module! {
                         withdraw_era: 0,
                     };
                     CreditLedger::<T>::insert(controller.clone(), ledger.clone());
-    
+
                     let current_era = CurrentEra::get().unwrap_or(0);
                     if Delegators::<T>::contains_key(current_era, validator.clone()){
                         let mut delegators = Delegators::<T>::take(current_era, validator.clone());
-                        delegators.push(controller.clone());
+                        delegators.push((controller.clone(),score));
                         Delegators::<T>::insert(current_era, validator.clone(), delegators);
                     }else{
-                        let delegators = vec![controller.clone()];
+                        let delegators = vec![(controller.clone(),score)];
                         Delegators::<T>::insert(current_era, validator.clone(), delegators);
                     }
-    
+
                     Self::deposit_event(RawEvent::Delegated(controller, validator, score));
                 }
             }
@@ -249,7 +273,7 @@ decl_module! {
         }
 
         #[weight = 10_000]
-        pub fn getdelegators(origin, era_index: u32) -> dispatch::DispatchResult{
+        pub fn getdelegators(origin, era_index: u32, validator: T::AccountId) -> dispatch::DispatchResult{
             info!("[FLQ] get delegators for era_index : {:?}", era_index);
             // 查看指定 era 周期内对应的 delegators
             // TODO 待实现
@@ -290,19 +314,16 @@ impl<T: Trait> CreditDelegateInterface<T::AccountId> for Module<T> {
                         <Delegators<T>>::get(current_era - 1, candidate_validator.clone());
                     let next_delegators: Vec<_> = delegators
                         .iter()
-                        .filter(|delegator| {
+                        .filter(|(delegator, _)| {
                             let ledger = <CreditLedger<T>>::get(delegator);
                             ledger.withdraw_era == 0 // ==0 正常质押credit
                         })
                         .collect();
-                    <Delegators<T>>::insert(current_era, candidate_validator, next_delegators.clone());
-                    
-                    // update credit score of next delegators
-                    for delegator in next_delegators{
-                        if let Some(score) = pallet_credit::Module::<T>::get_user_credit(delegator.clone()){
-                            <CreditLedger<T>>::mutate(delegator.clone(), |ledger| (*ledger).delegated_score = score);
-                        }
-                    }
+                    <Delegators<T>>::insert(
+                        current_era,
+                        candidate_validator,
+                        next_delegators.clone(),
+                    );
                 }
             }
         }
@@ -318,12 +339,16 @@ impl<T: Trait> CreditDelegateInterface<T::AccountId> for Module<T> {
 
     fn delegated_score_of_validator(validator: &T::AccountId) -> Option<u64> {
         let era_index = <CurrentEra>::get().unwrap_or(0);
-        let delegators = <Delegators<T>>::get(era_index, validator);
-        let mut score: u64 = 0;
-        for delegator in delegators {
-            score += Self::get_delegated_score(delegator).unwrap_or(0);
+        if <Delegators<T>>::contains_key(era_index, validator.clone()){
+            let delegators = <Delegators<T>>::get(era_index, validator);
+            let mut score: u64 = 0;
+            for (_, s) in delegators {
+                score += s;
+            }
+            Some(score)
+        }else{
+            Some(0)
         }
-        Some(score)
     }
 
     fn total_delegated_score() -> Option<u64> {
@@ -349,25 +374,23 @@ impl<T: Trait> CreditDelegateInterface<T::AccountId> for Module<T> {
         }
     }
 
-    fn kill_credit(account_id: T::AccountId) -> bool{
-        if CreditLedger::<T>::contains_key(account_id.clone()){
+    fn kill_credit(account_id: T::AccountId) -> bool {
+        if CreditLedger::<T>::contains_key(account_id.clone()) {
             let ledger = <CreditLedger<T>>::get(account_id.clone());
             let validator = ledger.validator_account;
-            
+
             let current_era = Self::current_era().unwrap_or(0);
             let mut start_index = 0;
-            if current_era > 84{
+            if current_era > 84 {
                 start_index = current_era - 84;
             }
 
-            for era in start_index..current_era+1{
-                if <Delegators<T>>::contains_key(era, validator.clone()){
+            for era in start_index..current_era + 1 {
+                if <Delegators<T>>::contains_key(era, validator.clone()) {
                     let delegators = <Delegators<T>>::take(era, validator.clone());
-                    let next_delegators:Vec<_> = delegators
+                    let next_delegators: Vec<_> = delegators
                         .iter()
-                        .filter(|delegator|{
-                            *delegator != &account_id
-                        })
+                        .filter(|(delegator, _)| delegator != &account_id)
                         .collect();
                     <Delegators<T>>::insert(era, validator.clone(), next_delegators)
                 }
