@@ -17,12 +17,15 @@ use frame_support::{
 };
 use frame_system::ensure_signed;
 use sp_std::vec::Vec;
+use sp_std::vec;
+use pallet_credit::CreditInterface;
 
 /// Configure the pallet by specifying the parameters and types on which it depends.
-pub trait Trait: frame_system::Trait + pallet_credit::Trait {
+pub trait Trait: frame_system::Trait + pallet_credit::Trait{
     /// Because this pallet emits events, it depends on the runtime's definition of an event.
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
     type Currency: Currency<Self::AccountId>;
+    type CreditInterface: CreditInterface<Self::AccountId>;
 }
 
 pub type EraIndex = u32;
@@ -87,6 +90,8 @@ decl_error! {
         NotDelegate,
         NoCreditLedgerData,
         NotRightEra,
+        CreditScoreTooLow,
+        NonCandidateValidator,
     }
 }
 
@@ -108,30 +113,66 @@ decl_module! {
             let controller = ensure_signed(origin)?;
 
             if let Some(candidate_validators) = CandidateValidators::<T>::get(){
-                ensure!(candidate_validators.contains(&validator), "Validator AccountId  isn't in candidateValidators");
+                if !candidate_validators.contains(&validator){
+                    error!("Validator AccountId  isn't in candidateValidators");
+                    Err(Error::<T>::NonCandidateValidator)?
+                }
             }
 
-            if let Some(score) = pallet_credit::Module::<T>::get_user_credit(controller.clone())
-            {
-                let ledger = CreditScoreLedger{
-                    delegated_account: controller.clone(),
-                    delegated_score: score,
-                    validator_account: validator.clone(),
-                    withdraw_era: 0,
-                };
+            if T::CreditInterface::pass_threshold(controller.clone(), 0) == false{
+                error!("Credit score is to low to delegating a validator!");
+                Err(Error::<T>::CreditScoreTooLow)?
+            }else{
+                let score = pallet_credit::Module::<T>::get_user_credit(controller.clone()).unwrap();
+                if CreditLedger::<T>::contains_key(controller.clone()){ // change delegate target
+                    let _ledger = CreditLedger::<T>::get(controller.clone());
+                    if _ledger.validator_account != validator.clone(){ // target is diffent
+                        CreditLedger::<T>::mutate(controller.clone(), |ledger| {
+                            (*ledger).validator_account = validator.clone();
+                            (*ledger).withdraw_era = 0;
+                        });
+                        let current_era = CurrentEra::get().unwrap_or(0);
+                        let last_validator = _ledger.validator_account;
 
-                CreditLedger::<T>::insert(controller.clone(), ledger.clone());
+                        // remove controller from old validator
+                        if Delegators::<T>::contains_key(current_era, last_validator.clone()){
+                            let delegators = Delegators::<T>::take(current_era, last_validator.clone());
+                            let next_delegators: Vec<_> = delegators
+                                .iter()
+                                .filter(|delegator|{
+                                    *delegator != &controller
+                                })
+                                .collect();
+                            Delegators::<T>::insert(current_era, last_validator.clone(), next_delegators);
+                        }
 
-                if CreditLedger::<T>::contains_key(controller.clone()) {
-                    info!("[FLQ] insert to ledger success .")
+                        // add controller to new validator
+                        if Delegators::<T>::contains_key(current_era, validator.clone()){
+                            let mut delegators = Delegators::<T>::take(current_era, validator.clone());
+                            delegators.push(controller.clone());
+                            Delegators::<T>::insert(current_era, validator.clone(), delegators);
+                        }else{
+                            let delegators = vec![controller.clone()];
+                            Delegators::<T>::insert(current_era, validator.clone(), delegators);
+                        }
+
+                    }
+                }else{ // delegate
+                    let ledger = CreditScoreLedger{
+                        delegated_account: controller.clone(),
+                        delegated_score: score,
+                        validator_account: validator.clone(),
+                        withdraw_era: 0,
+                    };
+                    CreditLedger::<T>::insert(controller.clone(), ledger.clone());
+    
+                    let current_era = CurrentEra::get().unwrap_or(0);
+                    let mut delegators = Delegators::<T>::take(current_era, validator.clone());
+                    delegators.push(controller.clone());
+                    Delegators::<T>::insert(current_era, validator.clone(), delegators);
+    
+                    Self::deposit_event(RawEvent::Delegated(controller, validator, score));
                 }
-
-                let current_era = CurrentEra::get().unwrap_or(0);
-                let mut delegators = Delegators::<T>::take(current_era, validator.clone());
-                delegators.push(controller.clone());
-                Delegators::<T>::insert(current_era, validator.clone(), delegators);
-
-                Self::deposit_event(RawEvent::Delegated(controller, validator, score));
             }
             Ok(())
         }

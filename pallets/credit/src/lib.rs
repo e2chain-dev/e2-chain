@@ -140,14 +140,12 @@ impl<T: Trait> CreditInterface<T::AccountId> for Module<T> {
     }
 
     /// check if account_id's credit score is pass threshold ttype
-    fn pass_threshold(account_id: T::AccountId, ttype: u8) -> bool {
+    fn pass_threshold(account_id: T::AccountId, _ttype: u8) -> bool {
         if UserCredit::<T>::contains_key(account_id.clone()) {
             if let Some(score) = UserCredit::<T>::get(account_id) {
-                let mut is_passed = false;
-                if score > ttype as u64 {
-                    is_passed = true;
+                if score > CREDIT_SCORE_DELEGATED_PERMIT_THRESHOLD {
+                    return true;
                 }
-                return is_passed;
             }
         }
         false
