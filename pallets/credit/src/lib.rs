@@ -116,6 +116,7 @@ pub trait CreditInterface<AccountId> {
     fn pass_threshold(account_id: AccountId, ttype: u8) -> bool;
     fn credit_attenuation(account_id: AccountId, attenuate_score: u64) -> bool;
     fn kill_credit(account_id: AccountId) -> bool;
+    fn get_credit_score(account_id: AccountId) -> Option<u64>;
 }
 
 impl<T: Trait> CreditInterface<T::AccountId> for Module<T> {
@@ -184,5 +185,9 @@ impl<T: Trait> CreditInterface<T::AccountId> for Module<T> {
             return true;
         }
         false
+    }
+
+    fn get_credit_score(account_id: T::AccountId) -> Option<u64>{
+        Self::get_user_credit(account_id)
     }
 }

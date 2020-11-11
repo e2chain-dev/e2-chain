@@ -21,7 +21,7 @@ use sp_std::vec;
 use sp_std::vec::Vec;
 
 /// Configure the pallet by specifying the parameters and types on which it depends.
-pub trait Trait: frame_system::Trait + pallet_credit::Trait {
+pub trait Trait: frame_system::Trait{
     /// Because this pallet emits events, it depends on the runtime's definition of an event.
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
     type Currency: Currency<Self::AccountId>;
@@ -123,7 +123,7 @@ decl_module! {
                 error!("Credit score is to low to delegating a validator!");
                 Err(Error::<T>::CreditScoreTooLow)?
             }else{
-                let score = pallet_credit::Module::<T>::get_user_credit(controller.clone()).unwrap();
+                let score = T::CreditInterface::get_credit_score(controller.clone()).unwrap();
                 if CreditLedger::<T>::contains_key(controller.clone()){ // change delegate target
                     let _ledger = CreditLedger::<T>::get(controller.clone());
                     if _ledger.validator_account != validator.clone(){ // target is diffent
