@@ -220,10 +220,10 @@ In the key import step, we need import "babe" key instead of import "aura".
        ../target/debug/e2-chain build-spec --chain=second.json --raw --disable-default-bootnode > customSpecRaw.json
 
        # config chao.json  babe Account ID
-       subkey inspect --scheme sr25519 "talent indicate snap news awful vault broccoli fun inside curtain sing acid"
+       subkey inspect --scheme sr25519 "announce simple kind filter quote flavor task vote mystery rocket mosquito neglect"
        
       # config chao_gran.json grandpa Account ID 
-       #  subkey inspect --scheme ed25519 "talent indicate snap news awful vault broccoli fun inside curtain sing acid"
+       #  subkey inspect --scheme ed25519 "announce simple kind filter quote flavor task vote mystery rocket mosquito neglect"
 
     ```
 

@@ -1205,8 +1205,7 @@ dependencies = [
  "pallet-micropayment",
  "pallet-randomness-collective-flip",
  "pallet-session",
- "pallet-staking",
- "pallet-staking-reward-curve 2.0.0-rc6 (git+https://github.com/paritytech/substrate.git?tag=v2.0.0-rc6)",
+ "pallet-staking-reward-curve",
  "pallet-staking_with_credit",
  "pallet-sudo",
  "pallet-template",
@@ -3798,37 +3797,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-staking"
-version = "2.0.0-rc6"
-source = "git+https://github.com/paritytech/substrate.git?tag=v2.0.0-rc6#be8bb186d87b9d2b47a2907c9b51ae1e252362c3"
-dependencies = [
- "frame-support",
- "frame-system",
- "pallet-authorship",
- "pallet-session",
- "parity-scale-codec",
- "serde",
- "sp-application-crypto",
- "sp-io",
- "sp-npos-elections",
- "sp-runtime",
- "sp-staking",
- "sp-std",
- "static_assertions",
-]
-
-[[package]]
-name = "pallet-staking-reward-curve"
-version = "2.0.0-rc6"
-dependencies = [
- "proc-macro-crate",
- "proc-macro2",
- "quote",
- "sp-runtime",
- "syn",
-]
-
-[[package]]
 name = "pallet-staking-reward-curve"
 version = "2.0.0-rc6"
 source = "git+https://github.com/paritytech/substrate.git?tag=v2.0.0-rc6#be8bb186d87b9d2b47a2907c9b51ae1e252362c3"
@@ -3852,7 +3820,7 @@ dependencies = [
  "pallet-balances",
  "pallet-delegating",
  "pallet-session",
- "pallet-staking-reward-curve 2.0.0-rc6",
+ "pallet-staking-reward-curve",
  "pallet-timestamp",
  "parity-scale-codec",
  "parking_lot 0.10.2",

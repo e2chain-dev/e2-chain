@@ -34,7 +34,7 @@ sp-core = { git = 'https://github.com/paritytech/substrate.git', tag = 'v2.0.0-r
 sp-storage = { git = 'https://github.com/paritytech/substrate.git', tag = 'v2.0.0-rc6' }
 pallet-balances = { git = 'https://github.com/paritytech/substrate.git', tag = 'v2.0.0-rc6' }
 pallet-timestamp = { git = 'https://github.com/paritytech/substrate.git', tag = 'v2.0.0-rc6' }
-pallet-staking-reward-curve = { version = "2.0.0-rc6",  path = "reward-curve" }
+pallet-staking-reward-curve = { git = 'https://github.com/paritytech/substrate.git', tag = 'v2.0.0-rc6' }
 substrate-test-utils = { git = 'https://github.com/paritytech/substrate.git', tag = 'v2.0.0-rc6' }
 frame-benchmarking = { git = 'https://github.com/paritytech/substrate.git', tag = 'v2.0.0-rc6'}
 rand_chacha = { version = "0.2" }

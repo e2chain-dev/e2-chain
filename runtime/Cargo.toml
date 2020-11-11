@@ -71,21 +71,11 @@ git = 'https://github.com/paritytech/substrate.git'
 tag = 'v2.0.0-rc6'
 version = '2.0.0-rc6'
 
-
-
-[dependencies.pallet-staking]
-default-features = false
-git = 'https://github.com/paritytech/substrate.git'
-tag = 'v2.0.0-rc6'
-version = '2.0.0-rc6'
-
 [dependencies.pallet-staking-reward-curve]
 default-features = false
 git = 'https://github.com/paritytech/substrate.git'
 tag = 'v2.0.0-rc6'
 version = '2.0.0-rc6'
-
-
 
 [dependencies.pallet-randomness-collective-flip]
 default-features = false
@@ -263,12 +253,13 @@ std = [
     'sp-runtime/std',
     'sp-session/std',
     'sp-staking/std',
-    'pallet-staking/std',
+    'pallet-staking_with_credit/std',
     'sp-std/std',
     'sp-transaction-pool/std',
     'sp-version/std',
     'template/std',
     'delegating/std',
+    'credit/std'
 ]
 
 [build-dependencies.wasm-builder-runner]
