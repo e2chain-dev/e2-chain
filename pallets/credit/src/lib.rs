@@ -26,6 +26,19 @@ pub const CREDIT_SCORE_DELEGATED_PERMIT_THRESHOLD: u64 = 60;
 /// per credit score vote weight
 pub const TOKEN_PER_CREDIT_SCORE: u64 = 10_000_000;
 
+pub(crate) const LOG_TARGET: &'static str = "credit";
+
+// syntactic sugar for logging.
+#[macro_export]
+macro_rules! log {
+	($level:tt, $patter:expr $(, $values:expr)* $(,)?) => {
+		frame_support::debug::$level!(
+			target: crate::LOG_TARGET,
+			$patter $(, $values)*
+		)
+	};
+}
+
 /// Configure the pallet by specifying the parameters and types on which it depends.
 pub trait Trait: frame_system::Trait {
     /// Because this pallet emits events, it depends on the runtime's definition of an event.
@@ -107,6 +120,12 @@ decl_module! {
             Self::deposit_event(RawEvent::KillCreditSuccess(sender));
             Ok(())
         }
+
+        // Anything that needs to be done at the end of the block.
+		fn on_finalize(_n: T::BlockNumber) {
+			// We update credit score here.
+			log!(info, "update credit score in block number {:?}", _n);
+		}
     }
 }
 
